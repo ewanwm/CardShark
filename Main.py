@@ -12,7 +12,7 @@ import tkinter
 
 INFO("All modules loaded")
 
-GAME_LOG_LEVEL = logLevels.kDebug
+GAME_LOG_LEVEL = logLevels.kInfo
 
 ## number of cards dealt to each player
 MAX_CARDS = 2
@@ -277,28 +277,28 @@ class Game(gym.Env):
 
     def Income(self, p):
         player = self.playerList[p]
-        self.DEBUG(" Player: ", player.Name, "Action: Income")
+        self.INFO(" Player: ", player.Name, "Action: Income")
         player.giveCoins(1)
 
     def ForeignAid(self, p):
         player = self.playerList[p]
-        self.DEBUG(" Player: ", player.Name, "Action: ForeignAid")
+        self.INFO(" Player: ", player.Name, "Action: ForeignAid")
         player.giveCoins(2)
 
     def Coup(self, p1, p2):
         player1, player2 = self.playerList[p1], self.playerList[p2]
-        self.DEBUG(" Player: ", player1.Name, "Action: Income, Target: ", player2.Name)
+        self.INFO(" Player: ", player1.Name, "Action: Income, Target: ", player2.Name)
         player1.takeCoins(actions["Coup"]["cost"])
         player2.loseInfluence()
 
     def Tax(self, p):
         player = self.playerList[p]
-        self.DEBUG(" Player: ", player.Name, "Action: Tax")
+        self.INFO(" Player: ", player.Name, "Action: Tax")
         player.giveCoins(3)
 
     def Steal(self, p1, p2):
         player1, player2 = self.playerList[p1], self.playerList[p2]
-        self.DEBUG(" Player: ", player1.Name, "Action: Steal, Target: ", player2.Name)
+        self.INFO(" Player: ", player1.Name, "Action: Steal, Target: ", player2.Name)
 
         ## do this to avoid trying to steal 2 coins when target player doesn't have enoug
         ## this should probably be masked out but I'm not sure how to do that easily as it requires masking a specific combination of actions, (steal and specific players)
@@ -310,7 +310,7 @@ class Game(gym.Env):
 
     def Assassinate(self, p1, p2):
         player1, player2 = self.playerList[p1], self.playerList[p2]
-        self.DEBUG(" Player: ", player1.Name, "Action: Assassinate, Target: ", player2.Name)
+        self.INFO(" Player: ", player1.Name, "Action: Assassinate, Target: ", player2.Name)
         player1.takeCoins(3)
         player2.loseInfluence()
 
@@ -454,23 +454,23 @@ class Game(gym.Env):
         np.random.shuffle(cardList)
         for card in cardList:
             if player2.checkCard(card):
-                self.DEBUG("Challenge failed,", player2.Name, "had a", card)
+                self.INFO("Challenge failed,", player2.Name, "had a", card)
                 ## according to rules, player needs to return the card and get a new one
                 self.swapCard(p2, card)
                 player1.loseInfluence()
                 return "failed"
 
         ## if made it to this point, player2 didnt have any of the specified cards
-        self.DEBUG("Challenge succeeded,", player2.Name, "did not have any of", *cards)
+        self.INFO("Challenge succeeded,", player2.Name, "did not have any of", *cards)
         player2.loseInfluence()
 
         return "succeeded"
 
     def step(self, action):
-        self.DEBUG("")
-        self.DEBUG("")
-        self.DEBUG("##### Stepping #####")
-        self.DEBUG("gameState:",self.gameState)
+        self.INFO("")
+        self.INFO("")
+        self.INFO("##### Stepping #####")
+        self.INFO("gameState:",self.gameState)
         self.DEBUG("specified actions:", action)
 
         ## tings to return at the end of the step
@@ -484,7 +484,7 @@ class Game(gym.Env):
         ##### ACTION STATE #####
         if(self.gameState == "Action"):
             self.attemptedAction = actionNames[action[0]]
-            self.DEBUG("Player", self.playerList[self.currentPlayer_action].Name, "is attempting action", self.attemptedAction)
+            self.INFO("Player", self.playerList[self.currentPlayer_action].Name, "is attempting action", self.attemptedAction)
             
             blockable = False
             targetted = False
@@ -492,7 +492,7 @@ class Game(gym.Env):
             ## first check if this action has a targed
             if actions[self.attemptedAction]["targeted"]:
                 self.action_target = (self.currentPlayer_action + 1 + action[1]) % self.nPlayers
-                self.DEBUG("Targetting player", self.playerList[self.action_target].Name, "at index", self.action_target)
+                self.INFO("Targetting player", self.playerList[self.action_target].Name, "at index", self.action_target)
                 targetted = True
             else:
                 self.DEBUG("Not a targetted action")
@@ -538,7 +538,7 @@ class Game(gym.Env):
         elif(self.gameState == "Blocking_general"): ## state in which any player can attempt to block the attempted action
             if self.currentPlayer_block == self.currentPlayer_action:
                 ## we have returned to the acting player, indicating that no one blocked the action
-                self.DEBUG("action was not challenged by any player")
+                self.INFO("action was not challenged by any player")
                 self.performAttemptedAction()
                 self.currentPlayer_action = (self.currentPlayer_action + 1) % self.nPlayers
                 self.changeState("Action")
@@ -546,11 +546,12 @@ class Game(gym.Env):
             
             else:
                 if action[2] == 1: 
-                    self.DEBUG("player", self.playerList[self.currentPlayer_block].Name, "is attempting to block current action,", self.attemptedAction)
+                    self.INFO("player", self.playerList[self.currentPlayer_block].Name, "is attempting to block current action,", self.attemptedAction)
                     self.changeState("Challenge_block")
                     self.activePlayer = self.currentPlayer_action
                 elif action[2] == 0:
                     ## we dont change state, just move to the next player and let them block if they want
+                    self.INFO("player", self.playerList[self.currentPlayer_block].Name, "did not try to block current action,", self.attemptedAction)
                     self.currentPlayer_block = (self.currentPlayer_block + 1) % self.nPlayers
                     self.activePlayer = self.currentPlayer_block
                 
@@ -563,11 +564,11 @@ class Game(gym.Env):
         ##### TARGETTED BLOCKING STATE #####
         elif(self.gameState == "Blocking_target"): ## target of an action can attempt to block it 
             if action[2] == 1: 
-                self.DEBUG("player", self.playerList[self.currentPlayer_block].Name, "is attempting to block current action,", self.attemptedAction)
+                self.INFO("player", self.playerList[self.currentPlayer_block].Name, "is attempting to block current action,", self.attemptedAction)
                 self.changeState("Challenge_block")
                 self.activePlayer = self.currentPlayer_action
             else:
-                self.DEBUG("action was not challenged by",self.playerList[self.currentPlayer_block].Name)
+                self.INFO("action was not challenged by",self.playerList[self.currentPlayer_block].Name)
                 self.performAttemptedAction()
                 self.currentPlayer_action = (self.currentPlayer_action + 1) % self.nPlayers
                 self.changeState("Action")
@@ -577,7 +578,7 @@ class Game(gym.Env):
         elif(self.gameState == "Challenge_general"): ## any player can challenge the attempted action
             if self.currentPlayer_challenge == self.currentPlayer_action:
                 ## have returned back to acting player indicating no one blocked the action
-                self.DEBUG("action was not challenged by any player")
+                self.INFO("action was not challenged by any player")
                 self.performAttemptedAction()
                 self.currentPlayer_action = (self.currentPlayer_action + 1) % self.nPlayers
                 self.changeState("Action")
@@ -585,7 +586,7 @@ class Game(gym.Env):
 
             else:
                 if action[3] == 1: 
-                    self.DEBUG("player", self.playerList[self.currentPlayer_challenge].Name, "is challenging", self.playerList[self.currentPlayer_action].Name, "on their action,", self.attemptedAction)
+                    self.INFO("player", self.playerList[self.currentPlayer_challenge].Name, "is challenging", self.playerList[self.currentPlayer_action].Name, "on their action,", self.attemptedAction)
                     if self.challenge(self.currentPlayer_challenge, self.currentPlayer_action, actions[self.attemptedAction]["needs"]) == "failed":
                         self.performAttemptedAction()
                     
@@ -595,6 +596,7 @@ class Game(gym.Env):
                     self.activePlayer = self.currentPlayer_action
 
                 elif action[3] == 0:
+                        self.INFO("player", self.playerList[self.currentPlayer_challenge].Name, "did not attempt to challenge")
                         ## we dont change state, just move to the next player and let them block if they want
                         self.currentPlayer_challenge = (self.currentPlayer_challenge + 1) % self.nPlayers
                         self.activePlayer = self.currentPlayer_challenge
@@ -603,11 +605,11 @@ class Game(gym.Env):
         ##### TARGETTED CHALLENGE STATE #####
         elif(self.gameState == "Challenge_target"): ## target of an action can challenge it 
             if action[3] == 1: 
-                self.DEBUG("player", self.playerList[self.currentPlayer_challenge].Name, "is attempting to challenge current action,", self.attemptedAction)
+                self.INFO("player", self.playerList[self.currentPlayer_challenge].Name, "is attempting to challenge current action,", self.attemptedAction)
                 if self.challenge(self.currentPlayer_challenge, self.currentPlayer_action, actions[self.attemptedAction]["needs"]) == "failed":
                     self.performAttemptedAction()
             else:
-                self.DEBUG("action was not challenged by",self.playerList[self.currentPlayer_challenge].Name)
+                self.INFO("action was not challenged by",self.playerList[self.currentPlayer_challenge].Name)
                 self.performAttemptedAction()
                 
             self.currentPlayer_action = (self.currentPlayer_action + 1) % self.nPlayers
@@ -617,10 +619,10 @@ class Game(gym.Env):
         ##### CHALLENGE BLOCKING STATE #####
         elif(self.gameState == "Challenge_block"): ## initial action taking player can challenge an attempt to block their action
             if action[4] == 1: 
-                self.DEBUG("player", self.playerList[self.currentPlayer_action].Name, "is challenging the attempt by",self.playerList[self.currentPlayer_block].Name, "to block their action,", self.attemptedAction)
+                self.INFO("player", self.playerList[self.currentPlayer_action].Name, "is challenging the attempt by",self.playerList[self.currentPlayer_block].Name, "to block their action,", self.attemptedAction)
                 self.challenge(self.currentPlayer_action, self.currentPlayer_block, *actions[self.attemptedAction]["blockedBy"])
             else:
-                self.DEBUG("player", self.playerList[self.currentPlayer_action].Name, "accepts attempt by",self.playerList[self.currentPlayer_block].Name, "to block their action,", self.attemptedAction)
+                self.INFO("player", self.playerList[self.currentPlayer_action].Name, "accepts attempt by",self.playerList[self.currentPlayer_block].Name, "to block their action,", self.attemptedAction)
         
             self.currentPlayer_action = (self.currentPlayer_action + 1) % self.nPlayers
             self.changeState("Action")
