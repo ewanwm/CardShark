@@ -9,6 +9,7 @@ import tensorflow as tf
 print("Tensorflow version: ", tf.version.VERSION)
 import tf_agents as Agents
 import tkinter
+import xml.etree
 
 INFO("All modules loaded")
 
@@ -112,12 +113,15 @@ class Deck:
 class Player:
     nPlayers = 0
 
-    def __init__(self, playerName=""):
+    def __init__(self, playerName="", logger=None):
         if playerName == "":
             self.Name = "Player_" + str(Player.nPlayers)
             
         else: 
             self.Name = playerName
+
+        self.logger = logger
+
 
         self.Id = Player.nPlayers
         Player.nPlayers += 1
@@ -129,6 +133,19 @@ class Player:
         self.Cards = []
         self.CardStates = []
         self.isAlive = True
+        self.rewardAccum = 0
+
+    ## wrap the logger functions... must be a nicer way of doing this...
+    def ERROR(self, *messages): 
+        if self.logger != None: self.logger.error("{"+self.Name+"}", *messages)
+    def WARN(self, *messages): 
+        if self.logger != None: self.logger.warn("{"+self.Name+"}", *messages)
+    def INFO(self, *messages): 
+        if self.logger != None: self.logger.info("{"+self.Name+"}", *messages)
+    def DEBUG(self, *messages): 
+        if self.logger != None: self.logger.debug("{"+self.Name+"}", *messages)
+    def TRACE(self, *messages): 
+        if self.logger != None: self.logger.trace("{"+self.Name+"}", *messages)
 
     def giveCard(self, cardName):
         if not cardName in cards.keys():
@@ -139,6 +156,22 @@ class Player:
 
         self.Cards.append(cardName)
         self.CardStates.append("Alive")
+
+    def giveReward(self, reward):
+        self.INFO("Giving reward:", reward)
+        self.rewardAccum += reward
+        self.DEBUG("  Reward after:", self.rewardAccum)
+
+    def claimReward(self):
+        ## return the reward for this player and reset it
+        self.INFO("Claiming reward:",self.rewardAccum)
+        ret = self.rewardAccum
+        self.rewardAccum = 0.0
+        return ret
+    
+    def checkReward(self):
+        ## check how much reward this player has accumulated
+        return self.rewardAccum
 
     def takeCard(self, cardName):
         for i in range(MAX_CARDS):
@@ -163,7 +196,10 @@ class Player:
     
     def loseInfluence(self, cardIdx):
         ## kill card with index cardIdx
+        self.INFO("Losing influence. Card: ", self.Cards[cardIdx])
         self.cardStates[cardIdx] = "Dead"
+
+        self.giveReward(-10)
 
     def loseInfluence(self):
         ## kill one of the players cards at random
@@ -171,7 +207,12 @@ class Player:
             raise Exception("ERROR: trying to make", self.Name, "lose influence but all their cards are already dead: ", self.__str__())
         
         aliveCards = np.where(np.array(self.CardStates) == "Alive")[0]
-        self.CardStates[np.random.choice(aliveCards)] = "Dead"
+        cardIdx = np.random.choice(aliveCards)
+
+        self.INFO("Losing influence. Card: ", self.Cards[cardIdx])
+        self.CardStates[cardIdx] = "Dead"
+        
+        self.giveReward(-10)
     
     def __str__(self):
         retStr = "Name: " + self.Name + ", "
@@ -227,7 +268,7 @@ class Game(gym.Env):
         self.playerList = []
         self.nPlayers = nPlayers
         for _ in range(nPlayers):
-            self.playerList.append(Player())
+            self.playerList.append(Player(logger = self.logger))
 
         ## initialise the deck
         self.TRACE("  Creating deck")
@@ -280,21 +321,28 @@ class Game(gym.Env):
         self.INFO(" Player: ", player.Name, "Action: Income")
         player.giveCoins(1)
 
+        player.giveReward(1)
+
     def ForeignAid(self, p):
         player = self.playerList[p]
         self.INFO(" Player: ", player.Name, "Action: ForeignAid")
         player.giveCoins(2)
+        
+        player.giveReward(2)
 
     def Coup(self, p1, p2):
         player1, player2 = self.playerList[p1], self.playerList[p2]
         self.INFO(" Player: ", player1.Name, "Action: Income, Target: ", player2.Name)
         player1.takeCoins(actions["Coup"]["cost"])
         player2.loseInfluence()
+        
+        player1.giveReward(10)
 
     def Tax(self, p):
         player = self.playerList[p]
         self.INFO(" Player: ", player.Name, "Action: Tax")
         player.giveCoins(3)
+        player.giveReward(3)
 
     def Steal(self, p1, p2):
         player1, player2 = self.playerList[p1], self.playerList[p2]
@@ -307,12 +355,17 @@ class Game(gym.Env):
 
         player2.takeCoins(coinsToSteal)
         player1.giveCoins(coinsToSteal)
+        
+        player2.giveReward(-coinsToSteal)
+        player1.giveReward(coinsToSteal)
 
     def Assassinate(self, p1, p2):
         player1, player2 = self.playerList[p1], self.playerList[p2]
         self.INFO(" Player: ", player1.Name, "Action: Assassinate, Target: ", player2.Name)
         player1.takeCoins(3)
         player2.loseInfluence()
+
+        player1.giveReward(10)
 
     def Exchange():
         ## not yet implemented
@@ -468,7 +521,6 @@ class Game(gym.Env):
 
     def step(self, action):
         self.INFO("")
-        self.INFO("")
         self.INFO("##### Stepping #####")
         self.INFO("gameState:",self.gameState)
         self.DEBUG("specified actions:", action)
@@ -555,12 +607,6 @@ class Game(gym.Env):
                     self.currentPlayer_block = (self.currentPlayer_block + 1) % self.nPlayers
                     self.activePlayer = self.currentPlayer_block
                 
-        ## make the action space spec
-        ## 1st variable is which action to take in the "action" phase of the game
-        ## 2nd variable is which other player to target if applicable
-        ## 3rd variable is whether or not to attempt to block current attemted action in the "blocking" phase 
-        ## 4th variable is whether or not to challenge the acting player in the "challenge" phase
-        ## 5th variable is whether or not to challenge the attempted block
         ##### TARGETTED BLOCKING STATE #####
         elif(self.gameState == "Blocking_target"): ## target of an action can attempt to block it 
             if action[2] == 1: 
