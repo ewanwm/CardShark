@@ -173,6 +173,11 @@ class Player:
         ## check how much reward this player has accumulated
         return self.rewardAccum
 
+    def kill(self):
+        self.INFO("AAARGH, I'm dead!")
+        self.isAlive = False
+        self.giveReward(-30)
+
     def takeCard(self, cardName):
         for i in range(MAX_CARDS):
             if (self.CardStates[i] == "Alive") & (self.Cards[i] == cardName):
@@ -208,6 +213,8 @@ class Player:
         
         aliveCards = np.where(np.array(self.CardStates) == "Alive")[0]
         cardIdx = np.random.choice(aliveCards)
+
+        print(cardIdx)
 
         self.INFO("Losing influence. Card: ", self.Cards[cardIdx])
         self.CardStates[cardIdx] = "Dead"
@@ -375,6 +382,44 @@ class Game(gym.Env):
         ## not yet implemented
         return
     
+    def checkStatus(self):
+        ## check the status of all the of all players
+        ## for each one, check if all their cards are dead, if so, kill that player
+        ## if all but one player is dead, they win and we're done
+        ## returns true if game is finished, false otherwise
+
+        ## first check each player
+        for player in self.playerList:
+            allCardsDead = True
+            for cardId in range(MAX_CARDS):
+                if player.CardStates[cardId] == "Alive":
+                    allCardsDead = False
+
+            if(allCardsDead & player.isAlive):
+                player.kill()
+
+        aliveCount = 0
+        for player in self.playerList:
+            if player.isAlive:
+                aliveCount += 1
+
+        if aliveCount == 1:
+            self.INFO("=========== GAME OVER ===========")
+            
+            for player in self.playerList:
+                if player.isAlive:
+                    self.INFO("")
+                    self.INFO("  ** Player", player, "Wins! **")
+                    player.giveReward(50)
+
+                    ## move to special reward round state
+                    self.gameState = "Rewards"
+                    return True
+            
+        return False
+
+                
+    
     def getMask(self, playerIdx):
         ## get action space mask for player at index playerIdx in this games player list
         self.DEBUG("Getting action mask for player", self.playerList[playerIdx].Name, "at index", playerIdx)
@@ -494,9 +539,12 @@ class Game(gym.Env):
         ## take card from player, return to deck, shuffle then draw a new one
         player=self.playerList[p]
         player.takeCard(card)
+        self.INFO("Player", player.Name, "Swapping card", card)
         self.Deck.returnCard(card)
         self.Deck.shuffle()
-        player.giveCard(self.Deck.draw())
+        newCard = self.Deck.draw()
+        player.giveCard(newCard)
+        self.INFO("       was swapped for", newCard)
 
     def challenge(self, p1, p2, *cards):
         player1, player2 = self.playerList[p1], self.playerList[p2]
@@ -682,6 +730,8 @@ class Game(gym.Env):
             raise Exception()
         
         
+        terminated = self.checkStatus()
+
         ret_info = {"mask": self.getMask(self.activePlayer)}
         
         return (self.getObservation(self.activePlayer), self.getReward(self.activePlayer), ret_terminated, ret_truncated, ret_info)
@@ -690,7 +740,7 @@ gym.register("Coup_Game", Game)
 game = gym.make("Coup_Game", nPlayers=4)
 obs, reward, terminated, truncated, info = game.reset()
 
-for _ in range(10):
+for _ in range(100):
     obs, reward, terminated, truncated, info = game.step(game.action_space.sample(mask=info["mask"])) ##game.action_space.sample())
 
 
