@@ -455,6 +455,9 @@ class Game(gym.Env):
             for id in range(1, self.nPlayers):
                 if self.playerList[(id + playerIdx) % self.nPlayers].isAlive:
                     maskList[1][id - 1] = 1
+                else:
+                    maskList[1][id - 1] = 0
+
 
         else:
             maskList[0][:] = 0
@@ -587,6 +590,7 @@ class Game(gym.Env):
             if not self.playerList[self.currentPlayer_action].isAlive:
                 self.INFO(self.playerList[self.currentPlayer_action].Name, "is dead! skipping their action")
                 self.currentPlayer_action = (self.currentPlayer_action + 1) % self.nPlayers
+                self.activePlayer = self.currentPlayer_action
 
             else:
                 self.attemptedAction = actionNames[action[0]]
@@ -595,7 +599,7 @@ class Game(gym.Env):
                 blockable = False
                 targetted = False
                 challengable = False
-                ## first check if this action has a targed
+                ## first check if this action has a target
                 if actions[self.attemptedAction]["targeted"]:
                     self.action_target = (self.currentPlayer_action + 1 + action[1]) % self.nPlayers
                     self.INFO("Targetting player", self.playerList[self.action_target].Name, "at index", self.action_target)
@@ -645,6 +649,7 @@ class Game(gym.Env):
             if not self.playerList[self.currentPlayer_block].isAlive:
                 self.INFO(self.playerList[self.currentPlayer_block].Name, "is dead so they can't really block anything")
                 self.currentPlayer_block = (self.currentPlayer_block + 1) % self.nPlayers
+                self.activePlayer = self.currentPlayer_block
 
             else:
                 if self.currentPlayer_block == self.currentPlayer_action:
@@ -684,6 +689,7 @@ class Game(gym.Env):
             if not self.playerList[self.currentPlayer_challenge].isAlive:
                 self.INFO(self.playerList[self.currentPlayer_challenge].Name, "is dead so they can't really challenge anything")
                 self.currentPlayer_challenge = (self.currentPlayer_challenge + 1) % self.nPlayers
+                self.activePlayer = self.currentPlayer_challenge
                
             else:
                 if self.currentPlayer_challenge == self.currentPlayer_action:
