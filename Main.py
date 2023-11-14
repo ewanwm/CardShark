@@ -5,9 +5,10 @@ import gym
 import gym.spaces
 import random
 from Logging import *
-#import tensorflow as tf
-#print("Tensorflow version: ", tf.version.VERSION)
-#import tf_agents as Agents
+import tensorflow as tf
+print("Tensorflow version: ", tf.version.VERSION)
+import tf_agents as Agents
+import tkinter
 
 INFO("All modules loaded")
 
@@ -127,6 +128,7 @@ class Player:
         self.Coins = 2 ## start with 2 coins
         self.Cards = []
         self.CardStates = []
+        self.isAlive = True
 
     def giveCard(self, cardName):
         if not cardName in cards.keys():
@@ -200,6 +202,9 @@ class Game(gym.Env):
         ## 3rd variable is whether or not to attempt to block current attemted action in the "blocking" phase 
         ## 4th variable is whether or not to challenge the acting player in the "challenge" phase
         ## 5th variable is whether or not to challenge the attempted block
+        ### TODO: I think 3rd and 4th variable should be merged into one with 3 options: none, block, and challenge 
+        ###  so that situations where either block or challenge are valid can be dealth with more easily
+        ###  in situations where only one is valid, can easily just mask out the other one. 
         actionSpecNP = np.ndarray((5))
         actionSpecNP[0] = len(actions.keys())
         actionSpecNP[1] = nPlayers-1
@@ -256,11 +261,13 @@ class Game(gym.Env):
         self.gameState = "Action"
         self.attemptedAction = "NOT_SET"
         self.currentPlayer_action = 0
+        self.activePlayer = 0
         self.action_target = 999
         self.currentPlayer_block = 999
         self.currentPlayer_challenge = 999
 
-        return (self.getObservation(self.currentPlayer_action), {})
+        ret_info = {"mask": self.getMask(self.activePlayer)}
+        return (self.getObservation(self.activePlayer), 0, False, False, ret_info)
 
     def ERROR(self, *messages): self.logger.error(*messages)
     def WARN(self, *messages): self.logger.warn(*messages)
@@ -292,8 +299,14 @@ class Game(gym.Env):
     def Steal(self, p1, p2):
         player1, player2 = self.playerList[p1], self.playerList[p2]
         self.DEBUG(" Player: ", player1.Name, "Action: Steal, Target: ", player2.Name)
-        player2.takeCoins(2)
-        player1.giveCoins(2)
+
+        ## do this to avoid trying to steal 2 coins when target player doesn't have enoug
+        ## this should probably be masked out but I'm not sure how to do that easily as it requires masking a specific combination of actions, (steal and specific players)
+        ## BUT it's probably ok since the agents should learn to e.g. not steal from someone with 0 coins
+        coinsToSteal = min(player2.Coins, 2)
+
+        player2.takeCoins(coinsToSteal)
+        player1.giveCoins(coinsToSteal)
 
     def Assassinate(self, p1, p2):
         player1, player2 = self.playerList[p1], self.playerList[p2]
@@ -312,7 +325,66 @@ class Game(gym.Env):
     def getMask(self, playerIdx):
         ## get action space mask for player at index playerIdx in this games player list
         self.DEBUG("Getting action mask for player", self.playerList[playerIdx].Name, "at index", playerIdx)
+
+        ## make the action space spec
+        ## 1st variable is which action to take in the "action" phase of the game
+        ## 2nd variable is which other player to target if applicable
+        ## 3rd variable is whether or not to attempt to block current attemted action in the "blocking" phase 
+        ## 4th variable is whether or not to challenge the acting player in the "challenge" phase
+        ## 5th variable is whether or not to challenge the attempted block
+        maskList = []
+        maskList.append(np.ndarray((len(actions.keys())), dtype=np.int8))
+        maskList.append(np.ndarray((self.nPlayers-1,), dtype=np.int8))
+        maskList.append(np.ndarray((2,), dtype=np.int8))
+        maskList.append(np.ndarray((2,), dtype=np.int8))
+        maskList.append(np.ndarray((2,), dtype=np.int8))
+
+        if(self.gameState == "Action"):
+            if self.playerList[playerIdx].Coins < 10:
+                ## if player has >= 10 they can only perform a coup
+                ## and their only choice is which player to target
+                ## so we leave all mask values for actions at their default value of 0
+                for i, action in enumerate(actions.keys()):
+                    if self.playerList[playerIdx].Coins >= actions[action]["cost"]:
+                        maskList[0][i] = 1 
+                    else: 
+                        maskList[0][i] = 0
+
+                    ## currently unimplemented actions
+                    if action in ["Exchange", "Examine"]:
+                        maskList[0][i] = 0
+
+            ## can only target players that are alive
+            for id in range(1, self.nPlayers):
+                if self.playerList[(id + playerIdx) % self.nPlayers].isAlive:
+                    maskList[1][id - 1] = 1
+
+        else:
+            maskList[0][:] = 0
+            maskList[1][:] = 0
         
+        if(self.gameState in ["Blocking_general", "Blocking_target"]):
+            maskList[2][:] = 1
+        else:
+            maskList[2][:] = 0
+
+        if(self.gameState in ["Challenge_general", "Challenge_target"]):
+            maskList[3][:] = 1
+        else:
+            maskList[3][:] = 0
+
+        if(self.gameState == "Challenge_block"):
+            maskList[4][:] = 1
+        else:
+            maskList[4][:] = 0
+
+
+        self.DEBUG("Mask: ", maskList)
+        return tuple(maskList)
+    
+    def getReward(self, playerIdx):
+        ## TODO: implement this
+        return -999.9
     
     def getObservation(self, playerIdx):
         self.DEBUG("Getting observation for player", self.playerList[playerIdx].Name, "at index", playerIdx)
@@ -395,7 +467,9 @@ class Game(gym.Env):
         return "succeeded"
 
     def step(self, action):
-        self.DEBUG("stepping")
+        self.DEBUG("")
+        self.DEBUG("")
+        self.DEBUG("##### Stepping #####")
         self.DEBUG("gameState:",self.gameState)
         self.DEBUG("specified actions:", action)
 
@@ -404,7 +478,6 @@ class Game(gym.Env):
         ret_reward = 0
         ret_terminated = False
         ret_truncated = False
-        ret_info = {}
 
         ## check what state we are in 
 
@@ -418,7 +491,7 @@ class Game(gym.Env):
             challengable = False
             ## first check if this action has a targed
             if actions[self.attemptedAction]["targeted"]:
-                self.action_target = action[1]
+                self.action_target = (self.currentPlayer_action + 1 + action[1]) % self.nPlayers
                 self.DEBUG("Targetting player", self.playerList[self.action_target].Name, "at index", self.action_target)
                 targetted = True
             else:
@@ -445,7 +518,7 @@ class Game(gym.Env):
                 else:
                     self.currentPlayer_block = (self.currentPlayer_action + 1) % self.nPlayers
                     self.changeState("Blocking_general")
-                ret_observation = self.getObservation(self.currentPlayer_block)
+                self.activePlayer = self.currentPlayer_block
 
             elif challengable:
                 if targetted: 
@@ -454,12 +527,12 @@ class Game(gym.Env):
                 else:
                     self.currentPlayer_challenge = (self.currentPlayer_action + 1) % self.nPlayers
                     self.changeState("Challenge_general")
-                ret_observation = self.getObservation(self.currentPlayer_challenge)
+                self.activePlayer = self.currentPlayer_challenge
         
             else:
                 self.performAttemptedAction()
                 self.currentPlayer_action = (self.currentPlayer_action + 1) % self.nPlayers
-                ret_observation = self.getObservation(self.currentPlayer_action)
+                self.activePlayer = self.currentPlayer_action
 
         ##### GENERAL BLOCKING STATE #####
         elif(self.gameState == "Blocking_general"): ## state in which any player can attempt to block the attempted action
@@ -469,17 +542,17 @@ class Game(gym.Env):
                 self.performAttemptedAction()
                 self.currentPlayer_action = (self.currentPlayer_action + 1) % self.nPlayers
                 self.changeState("Action")
-                ret_observation = self.getObservation(self.currentPlayer_action)
+                self.activePlayer = self.currentPlayer_action
             
             else:
                 if action[2] == 1: 
                     self.DEBUG("player", self.playerList[self.currentPlayer_block].Name, "is attempting to block current action,", self.attemptedAction)
                     self.changeState("Challenge_block")
-                    ret_observation = self.getObservation(self.currentPlayer_action)
+                    self.activePlayer = self.currentPlayer_action
                 elif action[2] == 0:
                     ## we dont change state, just move to the next player and let them block if they want
                     self.currentPlayer_block = (self.currentPlayer_block + 1) % self.nPlayers
-                    ret_observation = self.getObservation(self.currentPlayer_block)
+                    self.activePlayer = self.currentPlayer_block
                 
         ## make the action space spec
         ## 1st variable is which action to take in the "action" phase of the game
@@ -492,36 +565,39 @@ class Game(gym.Env):
             if action[2] == 1: 
                 self.DEBUG("player", self.playerList[self.currentPlayer_block].Name, "is attempting to block current action,", self.attemptedAction)
                 self.changeState("Challenge_block")
-                ret_observation = self.getObservation(self.currentPlayer_action)
+                self.activePlayer = self.currentPlayer_action
             else:
                 self.DEBUG("action was not challenged by",self.playerList[self.currentPlayer_block].Name)
                 self.performAttemptedAction()
                 self.currentPlayer_action = (self.currentPlayer_action + 1) % self.nPlayers
                 self.changeState("Action")
-                ret_observation = self.getObservation(self.currentPlayer_action)
+                self.activePlayer = self.currentPlayer_action
         
         ##### GENERAL CHALLENGE STATE #####
         elif(self.gameState == "Challenge_general"): ## any player can challenge the attempted action
-            if self.currentPlayer_block != self.currentPlayer_action:
+            if self.currentPlayer_challenge == self.currentPlayer_action:
                 ## have returned back to acting player indicating no one blocked the action
                 self.DEBUG("action was not challenged by any player")
                 self.performAttemptedAction()
                 self.currentPlayer_action = (self.currentPlayer_action + 1) % self.nPlayers
                 self.changeState("Action")
-                ret_observation = self.getObservation(self.currentPlayer_action)
+                self.activePlayer = self.currentPlayer_action
 
             else:
                 if action[3] == 1: 
                     self.DEBUG("player", self.playerList[self.currentPlayer_challenge].Name, "is challenging", self.playerList[self.currentPlayer_action].Name, "on their action,", self.attemptedAction)
                     if self.challenge(self.currentPlayer_challenge, self.currentPlayer_action, actions[self.attemptedAction]["needs"]) == "failed":
                         self.performAttemptedAction()
-                        self.currentPlayer_action = (self.currentPlayer_action + 1) % self.nPlayers
-                        self.changeState("Action")
-                        ret_observation = self.getObservation(self.currentPlayer_action)
+                    
+                    ## If a challenge happened, it will be resolved straight away so we move back to the action state
+                    self.currentPlayer_action = (self.currentPlayer_action + 1) % self.nPlayers
+                    self.changeState("Action")
+                    self.activePlayer = self.currentPlayer_action
+
                 elif action[3] == 0:
                         ## we dont change state, just move to the next player and let them block if they want
                         self.currentPlayer_challenge = (self.currentPlayer_challenge + 1) % self.nPlayers
-                        ret_observation = self.getObservation(self.currentPlayer_challenge)
+                        self.activePlayer = self.currentPlayer_challenge
                         
         
         ##### TARGETTED CHALLENGE STATE #####
@@ -536,7 +612,7 @@ class Game(gym.Env):
                 
             self.currentPlayer_action = (self.currentPlayer_action + 1) % self.nPlayers
             self.changeState("Action")
-            ret_observation = self.getObservation(self.currentPlayer_action)
+            self.activePlayer = self.currentPlayer_action
         
         ##### CHALLENGE BLOCKING STATE #####
         elif(self.gameState == "Challenge_block"): ## initial action taking player can challenge an attempt to block their action
@@ -548,7 +624,7 @@ class Game(gym.Env):
         
             self.currentPlayer_action = (self.currentPlayer_action + 1) % self.nPlayers
             self.changeState("Action")
-            ret_observation = self.getObservation(self.currentPlayer_action)
+            self.activePlayer = self.currentPlayer_action
 
         ##### BLOCK OR CHALLENGE STATE #####
         elif(self.gameState == "Block_or_Challenge"): ## target of an action can either block or challenge the action
@@ -557,13 +633,16 @@ class Game(gym.Env):
             self.ERROR("Something has gone wrong, have ended up in an undefined state:", self.gameState)
             raise Exception()
         
-        return (ret_observation, ret_reward, ret_terminated, ret_truncated, ret_info)
+        
+        ret_info = {"mask": self.getMask(self.activePlayer)}
+        
+        return (self.getObservation(self.activePlayer), self.getReward(self.activePlayer), ret_terminated, ret_truncated, ret_info)
 
 gym.register("Coup_Game", Game)
 game = gym.make("Coup_Game", nPlayers=4)
-game.reset()
+obs, reward, terminated, truncated, info = game.reset()
 
 for _ in range(10):
-    game.step(game.action_space.sample()) ##game.action_space.sample())
+    obs, reward, terminated, truncated, info = game.step(game.action_space.sample(mask=info["mask"])) ##game.action_space.sample())
 
 
