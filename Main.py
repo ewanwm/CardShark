@@ -182,6 +182,7 @@ class Player:
         for i in range(MAX_CARDS):
             if (self.CardStates[i] == "Alive") & (self.Cards[i] == cardName):
                 self.Cards.pop(i)
+                self.CardStates.pop(i)
                 return
         
         raise Exception("ERROR: trying to take card", cardName, "away from player", self.Name, "but they do not have one that is alive")
@@ -213,8 +214,6 @@ class Player:
         
         aliveCards = np.where(np.array(self.CardStates) == "Alive")[0]
         cardIdx = np.random.choice(aliveCards)
-
-        print(cardIdx)
 
         self.INFO("Losing influence. Card: ", self.Cards[cardIdx])
         self.CardStates[cardIdx] = "Dead"
@@ -573,6 +572,8 @@ class Game(gym.Env):
         self.INFO("gameState:",self.gameState)
         self.DEBUG("specified actions:", action)
 
+        self.DEBUG("Active player", self.playerList[self.activePlayer])
+
         ## tings to return at the end of the step
         ret_observation = None
         ret_reward = 0
@@ -583,77 +584,87 @@ class Game(gym.Env):
 
         ##### ACTION STATE #####
         if(self.gameState == "Action"):
-            self.attemptedAction = actionNames[action[0]]
-            self.INFO("Player", self.playerList[self.currentPlayer_action].Name, "is attempting action", self.attemptedAction)
-            
-            blockable = False
-            targetted = False
-            challengable = False
-            ## first check if this action has a targed
-            if actions[self.attemptedAction]["targeted"]:
-                self.action_target = (self.currentPlayer_action + 1 + action[1]) % self.nPlayers
-                self.INFO("Targetting player", self.playerList[self.action_target].Name, "at index", self.action_target)
-                targetted = True
-            else:
-                self.DEBUG("Not a targetted action")
-
-            ## check if this action can be blocked by any card
-            if actions[self.attemptedAction]["blockedBy"] != [""]:
-                self.DEBUG("Could be blocked by", actions[self.attemptedAction]["blockedBy"])
-                blockable = True
-            else:
-                self.DEBUG("Not blockable")
-
-            ## check if this action could be challenged
-            if actions[self.attemptedAction]["needs"] != "":
-                self.DEBUG("can be challenged as action requires", actions[self.attemptedAction]["needs"])
-                challengable = True
-            else:
-                self.DEBUG("cant be challenged")
-
-            if(blockable):
-                if targetted: 
-                    self.currentPlayer_block = self.action_target
-                    self.changeState("Blocking_target")
-                else:
-                    self.currentPlayer_block = (self.currentPlayer_action + 1) % self.nPlayers
-                    self.changeState("Blocking_general")
-                self.activePlayer = self.currentPlayer_block
-
-            elif challengable:
-                if targetted: 
-                    self.currentPlayer_challenge = self.action_target
-                    self.changeState("Challenge_target")
-                else:
-                    self.currentPlayer_challenge = (self.currentPlayer_action + 1) % self.nPlayers
-                    self.changeState("Challenge_general")
-                self.activePlayer = self.currentPlayer_challenge
-        
-            else:
-                self.performAttemptedAction()
+            if not self.playerList[self.currentPlayer_action].isAlive:
+                self.INFO(self.playerList[self.currentPlayer_action].Name, "is dead! skipping their action")
                 self.currentPlayer_action = (self.currentPlayer_action + 1) % self.nPlayers
-                self.activePlayer = self.currentPlayer_action
+
+            else:
+                self.attemptedAction = actionNames[action[0]]
+                self.INFO("Player", self.playerList[self.currentPlayer_action].Name, "is attempting action", self.attemptedAction)
+                
+                blockable = False
+                targetted = False
+                challengable = False
+                ## first check if this action has a targed
+                if actions[self.attemptedAction]["targeted"]:
+                    self.action_target = (self.currentPlayer_action + 1 + action[1]) % self.nPlayers
+                    self.INFO("Targetting player", self.playerList[self.action_target].Name, "at index", self.action_target)
+                    targetted = True
+                else:
+                    self.DEBUG("Not a targetted action")
+
+                ## check if this action can be blocked by any card
+                if actions[self.attemptedAction]["blockedBy"] != [""]:
+                    self.DEBUG("Could be blocked by", actions[self.attemptedAction]["blockedBy"])
+                    blockable = True
+                else:
+                    self.DEBUG("Not blockable")
+
+                ## check if this action could be challenged
+                if actions[self.attemptedAction]["needs"] != "":
+                    self.DEBUG("can be challenged as action requires", actions[self.attemptedAction]["needs"])
+                    challengable = True
+                else:
+                    self.DEBUG("cant be challenged")
+
+                if(blockable):
+                    if targetted: 
+                        self.currentPlayer_block = self.action_target
+                        self.changeState("Blocking_target")
+                    else:
+                        self.currentPlayer_block = (self.currentPlayer_action + 1) % self.nPlayers
+                        self.changeState("Blocking_general")
+                    self.activePlayer = self.currentPlayer_block
+
+                elif challengable:
+                    if targetted: 
+                        self.currentPlayer_challenge = self.action_target
+                        self.changeState("Challenge_target")
+                    else:
+                        self.currentPlayer_challenge = (self.currentPlayer_action + 1) % self.nPlayers
+                        self.changeState("Challenge_general")
+                    self.activePlayer = self.currentPlayer_challenge
+            
+                else:
+                    self.performAttemptedAction()
+                    self.currentPlayer_action = (self.currentPlayer_action + 1) % self.nPlayers
+                    self.activePlayer = self.currentPlayer_action
 
         ##### GENERAL BLOCKING STATE #####
         elif(self.gameState == "Blocking_general"): ## state in which any player can attempt to block the attempted action
-            if self.currentPlayer_block == self.currentPlayer_action:
-                ## we have returned to the acting player, indicating that no one blocked the action
-                self.INFO("action was not challenged by any player")
-                self.performAttemptedAction()
-                self.currentPlayer_action = (self.currentPlayer_action + 1) % self.nPlayers
-                self.changeState("Action")
-                self.activePlayer = self.currentPlayer_action
-            
+            if not self.playerList[self.currentPlayer_block].isAlive:
+                self.INFO(self.playerList[self.currentPlayer_block].Name, "is dead so they can't really block anything")
+                self.currentPlayer_block = (self.currentPlayer_block + 1) % self.nPlayers
+
             else:
-                if action[2] == 1: 
-                    self.INFO("player", self.playerList[self.currentPlayer_block].Name, "is attempting to block current action,", self.attemptedAction)
-                    self.changeState("Challenge_block")
+                if self.currentPlayer_block == self.currentPlayer_action:
+                    ## we have returned to the acting player, indicating that no one blocked the action
+                    self.INFO("action was not challenged by any player")
+                    self.performAttemptedAction()
+                    self.currentPlayer_action = (self.currentPlayer_action + 1) % self.nPlayers
+                    self.changeState("Action")
                     self.activePlayer = self.currentPlayer_action
-                elif action[2] == 0:
-                    ## we dont change state, just move to the next player and let them block if they want
-                    self.INFO("player", self.playerList[self.currentPlayer_block].Name, "did not try to block current action,", self.attemptedAction)
-                    self.currentPlayer_block = (self.currentPlayer_block + 1) % self.nPlayers
-                    self.activePlayer = self.currentPlayer_block
+                
+                else:
+                    if action[2] == 1: 
+                        self.INFO("player", self.playerList[self.currentPlayer_block].Name, "is attempting to block current action,", self.attemptedAction)
+                        self.changeState("Challenge_block")
+                        self.activePlayer = self.currentPlayer_action
+                    elif action[2] == 0:
+                        ## we dont change state, just move to the next player and let them block if they want
+                        self.INFO("player", self.playerList[self.currentPlayer_block].Name, "did not try to block current action,", self.attemptedAction)
+                        self.currentPlayer_block = (self.currentPlayer_block + 1) % self.nPlayers
+                        self.activePlayer = self.currentPlayer_block
                 
         ##### TARGETTED BLOCKING STATE #####
         elif(self.gameState == "Blocking_target"): ## target of an action can attempt to block it 
@@ -670,31 +681,36 @@ class Game(gym.Env):
         
         ##### GENERAL CHALLENGE STATE #####
         elif(self.gameState == "Challenge_general"): ## any player can challenge the attempted action
-            if self.currentPlayer_challenge == self.currentPlayer_action:
-                ## have returned back to acting player indicating no one blocked the action
-                self.INFO("action was not challenged by any player")
-                self.performAttemptedAction()
-                self.currentPlayer_action = (self.currentPlayer_action + 1) % self.nPlayers
-                self.changeState("Action")
-                self.activePlayer = self.currentPlayer_action
-
+            if not self.playerList[self.currentPlayer_challenge].isAlive:
+                self.INFO(self.playerList[self.currentPlayer_challenge].Name, "is dead so they can't really challenge anything")
+                self.currentPlayer_challenge = (self.currentPlayer_challenge + 1) % self.nPlayers
+               
             else:
-                if action[3] == 1: 
-                    self.INFO("player", self.playerList[self.currentPlayer_challenge].Name, "is challenging", self.playerList[self.currentPlayer_action].Name, "on their action,", self.attemptedAction)
-                    if self.challenge(self.currentPlayer_challenge, self.currentPlayer_action, actions[self.attemptedAction]["needs"]) == "failed":
-                        self.performAttemptedAction()
-                    
-                    ## If a challenge happened, it will be resolved straight away so we move back to the action state
+                if self.currentPlayer_challenge == self.currentPlayer_action:
+                    ## have returned back to acting player indicating no one blocked the action
+                    self.INFO("action was not challenged by any player")
+                    self.performAttemptedAction()
                     self.currentPlayer_action = (self.currentPlayer_action + 1) % self.nPlayers
                     self.changeState("Action")
                     self.activePlayer = self.currentPlayer_action
 
-                elif action[3] == 0:
-                        self.INFO("player", self.playerList[self.currentPlayer_challenge].Name, "did not attempt to challenge")
-                        ## we dont change state, just move to the next player and let them block if they want
-                        self.currentPlayer_challenge = (self.currentPlayer_challenge + 1) % self.nPlayers
-                        self.activePlayer = self.currentPlayer_challenge
+                else:
+                    if action[3] == 1: 
+                        self.INFO("player", self.playerList[self.currentPlayer_challenge].Name, "is challenging", self.playerList[self.currentPlayer_action].Name, "on their action,", self.attemptedAction)
+                        if self.challenge(self.currentPlayer_challenge, self.currentPlayer_action, actions[self.attemptedAction]["needs"]) == "failed":
+                            self.performAttemptedAction()
                         
+                        ## If a challenge happened, it will be resolved straight away so we move back to the action state
+                        self.currentPlayer_action = (self.currentPlayer_action + 1) % self.nPlayers
+                        self.changeState("Action")
+                        self.activePlayer = self.currentPlayer_action
+
+                    elif action[3] == 0:
+                            self.INFO("player", self.playerList[self.currentPlayer_challenge].Name, "did not attempt to challenge")
+                            ## we dont change state, just move to the next player and let them block if they want
+                            self.currentPlayer_challenge = (self.currentPlayer_challenge + 1) % self.nPlayers
+                            self.activePlayer = self.currentPlayer_challenge
+                            
         
         ##### TARGETTED CHALLENGE STATE #####
         elif(self.gameState == "Challenge_target"): ## target of an action can challenge it 
