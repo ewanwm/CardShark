@@ -10,7 +10,7 @@ MAX_CARDS = 2
 ## possible actions players can take
 ##         Action        | Card Needed          | Blocked by                           | Cost      | isTargeted
 actions = {"Income":      {"needs":"",           "blockedBy":[""],                      "cost":0,   "targeted":False},
-           "Foreign Aid": {"needs":"",           "blockedBy":["Duke"],                  "cost":0,   "targeted":False},
+           "ForeignAid": {"needs":"",           "blockedBy":["Duke"],                  "cost":0,   "targeted":False},
            "Coup":        {"needs":"",           "blockedBy":[""],                      "cost":7,   "targeted":True},
            "Tax":         {"needs":"Duke",       "blockedBy":[""],                      "cost":0,   "targeted":False},
            "Steal":       {"needs":"Captain",    "blockedBy":["Captain", "Inquisitor"], "cost":0,   "targeted":True},
@@ -69,6 +69,8 @@ class Game(gym.Env):
         observationSpecNP[:, 1:] = len(cards.keys()) +1 # <- one index for each possible card + one for face down card 
         self.DEBUG("observationSpecNP: ", observationSpecNP)
         self.observation_space = gym.spaces.MultiDiscrete(observationSpecNP)
+        ## TODO: Add an observation for which player is targetting this player with an action
+        ## TODO: Add an observation for which action is currently being attempted and by who
 
         ## initialise the players
         self.TRACE("  Creating players")
@@ -114,30 +116,37 @@ class Game(gym.Env):
         self.currentPlayer_block = 999
         self.currentPlayer_challenge = 999
 
-        ret_info = {"mask": self.getMask(self.activePlayer)}
+        ret_info = {}
+
+        ret_info["mask"] = self.getMask(self.activePlayer)
+        ret_info["activePlayer"] = self.activePlayer
         return (self.getObservation(self.activePlayer), 0, False, False, ret_info)
 
+    ## Wrappers for logger functions for the logger specific to this game
     def ERROR(self, *messages): self.logger.error(*messages)
     def WARN(self, *messages): self.logger.warn(*messages)
     def INFO(self, *messages): self.logger.info(*messages)
     def DEBUG(self, *messages): self.logger.debug(*messages)
     def TRACE(self, *messages): self.logger.trace(*messages)
 
-    def Income(self, p):
+    ############################################################################################
+    #### These are the functions that actually perform the actions specified by the players ####
+    ############################################################################################
+    def _Income(self, p):
         player = self.playerList[p]
         self.INFO(" Player: ", player.Name, "Action: Income")
         player.giveCoins(1)
 
         player.giveReward(1)
 
-    def ForeignAid(self, p):
+    def _ForeignAid(self, p):
         player = self.playerList[p]
         self.INFO(" Player: ", player.Name, "Action: ForeignAid")
         player.giveCoins(2)
         
         player.giveReward(2)
 
-    def Coup(self, p1, p2):
+    def _Coup(self, p1, p2):
         player1, player2 = self.playerList[p1], self.playerList[p2]
         self.INFO(" Player: ", player1.Name, "Action: Income, Target: ", player2.Name)
         player1.takeCoins(actions["Coup"]["cost"])
@@ -145,13 +154,13 @@ class Game(gym.Env):
         
         player1.giveReward(10)
 
-    def Tax(self, p):
+    def _Tax(self, p):
         player = self.playerList[p]
         self.INFO(" Player: ", player.Name, "Action: Tax")
         player.giveCoins(3)
         player.giveReward(3)
 
-    def Steal(self, p1, p2):
+    def _Steal(self, p1, p2):
         player1, player2 = self.playerList[p1], self.playerList[p2]
         self.INFO(" Player: ", player1.Name, "Action: Steal, Target: ", player2.Name)
 
@@ -166,7 +175,7 @@ class Game(gym.Env):
         player2.giveReward(-coinsToSteal)
         player1.giveReward(coinsToSteal)
 
-    def Assassinate(self, p1, p2):
+    def _Assasinate(self, p1, p2):
         player1, player2 = self.playerList[p1], self.playerList[p2]
         self.INFO(" Player: ", player1.Name, "Action: Assassinate, Target: ", player2.Name)
         player1.takeCoins(3)
@@ -174,13 +183,24 @@ class Game(gym.Env):
 
         player1.giveReward(10)
 
-    def Exchange():
+    def _Exchange():
+        raise Exception("ERROR: Exchange() not implemented yet")
         ## not yet implemented
-        return
 
-    def Examine():
+    def _Examine():
+        raise Exception("ERROR: Exchange() not implemented yet")
         ## not yet implemented
-        return
+    
+    def performAttemptedAction(self):
+        fn = self.__getattribute__("_" + self.attemptedAction) ## get the function corresponding to the attempted action
+
+        if actions[self.attemptedAction]["targeted"]:
+            fn(self.currentPlayer_action, self.action_target)
+        else:
+            fn(self.currentPlayer_action)
+    
+
+
     
     def checkStatus(self):
         ## check the status of all the of all players
@@ -188,6 +208,10 @@ class Game(gym.Env):
         ## if all but one player is dead, they win and we're done
         ## returns true if game is finished, false otherwise
 
+        if self.gameState == "Rewards":
+            ## if we've already checked and are finished we can just return here
+            return True 
+        
         ## first check each player
         for player in self.playerList:
             allCardsDead = True
@@ -214,6 +238,8 @@ class Game(gym.Env):
 
                     ## move to special reward round state
                     self.gameState = "Rewards"
+                    self.currentPlayer_Reward = 0
+                    self.activePlayer = 0
                     return True
             
         return False
@@ -279,13 +305,18 @@ class Game(gym.Env):
         else:
             maskList[4][:] = 0
 
+        ## If in final reward state, player cant do anything
+        if(self.gameState == "Rewards"):
+            for i in range(len(maskList)):
+                maskList[i][:] = 0
+
+        ## If dead, player cant do anything
+        if(not self.playerList[playerIdx].isAlive):
+            for i in range(len(maskList)):
+                maskList[i][:] = 0
 
         self.DEBUG("Mask: ", maskList)
         return tuple(maskList)
-    
-    def getReward(self, playerIdx):
-        ## TODO: implement this
-        return -999.9
     
     def getObservation(self, playerIdx):
         self.DEBUG("Getting observation for player", self.playerList[playerIdx].Name, "at index", playerIdx)
@@ -323,21 +354,6 @@ class Game(gym.Env):
         self.DEBUG("moving from state", self.gameState, "to state", newState)
         self.gameState = newState
 
-    def performAttemptedAction(self):
-        if self.attemptedAction == "Income": fn = self.Income
-        if self.attemptedAction == "Foreign Aid": fn = self.ForeignAid
-        if self.attemptedAction == "Coup": fn = self.Coup
-        if self.attemptedAction == "Tax": fn = self.Tax
-        if self.attemptedAction == "Steal": fn = self.Steal
-        if self.attemptedAction == "Assasinate": fn = self.Assassinate
-        if self.attemptedAction == "Exchange": fn = self.Exchange
-        if self.attemptedAction == "Examine": fn = self.Examine
-
-        if actions[self.attemptedAction]["targeted"]:
-            fn(self.currentPlayer_action, self.action_target)
-        else:
-            fn(self.currentPlayer_action)
-    
     def swapCard(self, p, card):
         ## take card from player, return to deck, shuffle then draw a new one
         player=self.playerList[p]
@@ -383,6 +399,11 @@ class Game(gym.Env):
         ret_reward = 0
         ret_terminated = False
         ret_truncated = False
+        ret_info = {}
+
+        ## set this so that on the outside, we know which player we should give the reward to 
+        ret_info["activePlayer"] = self.activePlayer
+        ret_reward = self.playerList[self.activePlayer].claimReward()
 
         ## check what state we are in 
 
@@ -548,13 +569,30 @@ class Game(gym.Env):
         ##### BLOCK OR CHALLENGE STATE #####
         elif(self.gameState == "Block_or_Challenge"): ## target of an action can either block or challenge the action
             return
+        
+        ##### REWARDS STATE #####
+        elif(self.gameState == "Rewards"): ## target of an action can either block or challenge the action
+            player = self.playerList[self.activePlayer]
+            reward = player.claimReward()
+            self.INFO("Player", player.Name, "Final reward:", reward)
+            
+            self.currentPlayer_Reward = (self.currentPlayer_Reward + 1) % self.nPlayers
+            self.activePlayer = self.currentPlayer_Reward
+        
+            ret_reward = reward
+
+            if self.currentPlayer_Reward == 0:
+                self.INFO("========= DONE HANDING OUT REWARDS ==========")
+                ret_terminated = True ## And we're DONE!
+
         else:
             self.ERROR("Something has gone wrong, have ended up in an undefined state:", self.gameState)
             raise Exception()
         
         
-        terminated = self.checkStatus()
-
-        ret_info = {"mask": self.getMask(self.activePlayer)}
+        if not ret_terminated:
+            self.checkStatus()
         
-        return (self.getObservation(self.activePlayer), self.getReward(self.activePlayer), ret_terminated, ret_truncated, ret_info)
+        ret_info["mask"] = self.getMask(self.activePlayer)
+        
+        return (self.getObservation(self.activePlayer), ret_reward, ret_terminated, ret_truncated, ret_info)
