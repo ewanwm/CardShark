@@ -6,6 +6,8 @@ logLevels = Enum("logLevels", "kSilent kError kWarning kInfo kDebug kTrace")
 ## set global default log level
 LOG_LEVEL = logLevels.kTrace
 
+GAME_LOG_LEVEL = logLevels.kInfo
+
 class Logger:
     nLoggers = 0
     def __init__(self, logLevel = LOG_LEVEL, name = ""):
