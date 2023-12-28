@@ -1,16 +1,20 @@
 from Logging import *
-import gym
 import numpy as np
 from Cards import *
 from Player import *
+from tf_agents.specs import BoundedArraySpec
+from tf_agents.environments import py_environment
+from tf_agents.trajectories import time_step as ts
+import itertools
 
 ## number of cards dealt to each player
 MAX_CARDS = 2
 
 ## possible actions players can take
 ##         Action        | Card Needed          | Blocked by                           | Cost      | isTargeted
-actions = {"Income":      {"needs":"",           "blockedBy":[""],                      "cost":0,   "targeted":False},
-           "ForeignAid": {"needs":"",           "blockedBy":["Duke"],                  "cost":0,   "targeted":False},
+actions = {"None":        {"needs":"",           "blockedBy":[""],                      "cost":0,   "targeted":False},
+           "Income":      {"needs":"",           "blockedBy":[""],                      "cost":0,   "targeted":False},
+           "ForeignAid":  {"needs":"",           "blockedBy":["Duke"],                  "cost":0,   "targeted":False},
            "Coup":        {"needs":"",           "blockedBy":[""],                      "cost":7,   "targeted":True},
            "Tax":         {"needs":"Duke",       "blockedBy":[""],                      "cost":0,   "targeted":False},
            "Steal":       {"needs":"Captain",    "blockedBy":["Captain", "Inquisitor"], "cost":0,   "targeted":True},
@@ -32,9 +36,9 @@ actionEnum   = Enum("actionEnum", actionString)
 DEBUG("actionString:", actionString)
 
 
-class Game(gym.Env):
+class Game(py_environment.PyEnvironment):
     nGames = 0
-    def __init__(self, nPlayers, name=""):
+    def __init__(self, nPlayers: int, allowInvalid: bool = False, name: str ="", unravelActionSpace: bool = False):
         if name == "":
             self.name = "Game_" + str(Game.nGames)
         else:
@@ -53,22 +57,35 @@ class Game(gym.Env):
         ### TODO: I think 3rd and 4th variable should be merged into one with 3 options: none, block, and challenge 
         ###  so that situations where either block or challenge are valid can be dealt with more easily
         ###  in situations where only one is valid, can easily just mask out the other one. 
-        actionSpecNP = np.ndarray((5))
-        actionSpecNP[0] = len(actions.keys())
-        actionSpecNP[1] = nPlayers-1
-        actionSpecNP[2] = 2
-        actionSpecNP[3] = 2
-        actionSpecNP[4] = 2
-        self.DEBUG("actionSpecNP: ", actionSpecNP)
-        self.action_space = gym.spaces.MultiDiscrete(actionSpecNP)
+        actionSpecMin_NP = np.ndarray((5))
+        actionSpecMin_NP[:] = 0
+        actionSpecMax_NP = np.ndarray((5))
+        actionSpecMax_NP[0] = len(actions.keys())
+        actionSpecMax_NP[1] = nPlayers
+        actionSpecMax_NP[2] = 2
+        actionSpecMax_NP[3] = 2
+        actionSpecMax_NP[4] = 2
+        self.DEBUG("actionSpecMax_NP: ", actionSpecMax_NP)
+        self._action_spec = BoundedArraySpec(minimum = actionSpecMin_NP, maximum = actionSpecMax_NP, shape=actionSpecMax_NP.shape, dtype=np.int32) ##gym.spaces.MultiDiscrete(actionSpecNP)
+
+        self._unravelActionSpace = unravelActionSpace
+        if unravelActionSpace: self._unravel_action_space()
 
         ## make array defining the observation spec
         ## this is the cards, and number of coins for each player
-        observationSpecNP = np.ndarray((nPlayers, 1 + MAX_CARDS))
-        observationSpecNP[:, 0] = 12 # <- 12 is the max number of coins a player can have
-        observationSpecNP[:, 1:] = len(cards.keys()) +1 # <- one index for each possible card + one for face down card 
-        self.DEBUG("observationSpecNP: ", observationSpecNP)
-        self.observation_space = gym.spaces.MultiDiscrete(observationSpecNP)
+        observationSpecMax_NP = np.ndarray((nPlayers, 1 + MAX_CARDS), dtype=np.float32)
+        observationSpecMin_NP = np.ndarray((nPlayers, 1 + MAX_CARDS), dtype=np.float32)
+        observationSpecMin_NP[:] = 0.0
+        observationSpecMax_NP[:, 0] = 12 # <- 12 is the max number of coins a player can have
+        observationSpecMax_NP[:, 1:] = len(cards.keys()) +1 # <- one index for each possible card + one for face down card 
+        
+        self.DEBUG("observationSpecMin_NP: ", observationSpecMin_NP)
+        self.DEBUG("observationSpecMax_NP: ", observationSpecMax_NP)
+        
+        self._observation_spec = {"observations": BoundedArraySpec(minimum = observationSpecMin_NP.flatten(), maximum = observationSpecMax_NP.flatten(), shape=observationSpecMax_NP.flatten().shape, name = "observation", dtype=np.float32),
+                                  "mask": BoundedArraySpec(minimum = 0, maximum = 1, shape=(self._action_spec.maximum - self._action_spec.minimum +1, ), dtype=np.int32, name = "mask"),
+                                  "activePlayer": BoundedArraySpec(minimum = 0, maximum = nPlayers, shape=(), dtype=np.int32, name = "activePlayer"),
+                                }
         ## TODO: Add an observation for which player is targetting this player with an action
         ## TODO: Add an observation for which action is currently being attempted and by who
 
@@ -85,9 +102,58 @@ class Game(gym.Env):
 
         Game.nGames += 1
 
-        self.reset()
+        self._reset()
 
-    def reset(self):
+    def action_array_to_string(self, action: np.array) -> str:
+        ## make the action space spec
+        ## 1st variable is which action to take in the "action" phase of the game
+        ## 2nd variable is which other player to target if applicable
+        ## 3rd variable is whether or not to attempt to block current attemted action in the "blocking" phase 
+        ## 4th variable is whether or not to challenge the acting player in the "challenge" phase
+        ## 5th variable is whether or not to challenge the attempted block
+        retStr = "Action: {action}, Target: {target}, {block}, {challenge}, {challenge_block}"
+
+        actionStr = actionNames[action[0]]
+
+        if action[1] == self.nPlayers - 1: targetStr = "None"
+        else: targetStr = action[1]
+
+        blockStr = "don't block" if (action[2] == 0) else "block"
+        challengeStr = "don't challenge" if (action[3] == 0) else "challenge"
+        challengeBlockStr = "don't challenge block" if (action[4] == 0) else "challenge block"
+
+        return retStr.format(action = actionStr,
+                      target = targetStr,
+                      block = blockStr,
+                      challenge = challengeStr,
+                      challenge_block = challengeBlockStr
+                      )
+    
+    def observation_spec(self):
+        return self._observation_spec
+    
+    def action_spec(self):
+        return self._action_spec
+
+    def _unravel_action_space(self):
+        self.DEBUG("Generating unravelled action space")
+        toProduct = []
+        for min, max in zip(self._action_spec.minimum, self._action_spec.maximum):
+            self.DEBUG("    MIN:", min, "MAX:", max)
+            toProduct.append([i for i in range(min, max)])
+
+        self.DEBUG("  Taking cartesian product of:", toProduct)
+
+        self._unravelledActionSpace = np.array([i for i in itertools.product(*toProduct)])
+
+        self.DEBUG("  Unravelled action space:", self._unravelledActionSpace)
+        self.DEBUG("  Number of possible actions:", len(self._unravelledActionSpace))
+
+        self._action_spec = BoundedArraySpec(minimum = 0, maximum = len(self._unravelledActionSpace), shape=(), dtype=np.int32)
+
+        return
+    
+    def _reset(self):
         self.DEBUG("Resetting game")
         ## set individual pieces back to initial state
         for player in self.playerList:
@@ -119,8 +185,13 @@ class Game(gym.Env):
         ret_info = {}
 
         ret_info["mask"] = self.getMask(self.activePlayer)
-        ret_info["activePlayer"] = self.activePlayer
-        return (self.getObservation(self.activePlayer), 0, False, False, ret_info)
+        ret_info["activePlayerIndex"] = self.activePlayer
+
+        return ts.restart(observation ={"observation": self.getObservation(self.activePlayer),
+                                        "mask": ret_info["mask"],
+                                        "activePlayer": self.activePlayer
+                                        }
+                         )
 
     ## Wrappers for logger functions for the logger specific to this game
     def ERROR(self, *messages): self.logger.error(*messages)
@@ -148,7 +219,7 @@ class Game(gym.Env):
 
     def _Coup(self, p1, p2):
         player1, player2 = self.playerList[p1], self.playerList[p2]
-        self.INFO(" Player: ", player1.Name, "Action: Income, Target: ", player2.Name)
+        self.INFO(" Player: ", player1.Name, "Action: Coup, Target: ", player2.Name)
         player1.takeCoins(actions["Coup"]["cost"])
         player2.loseInfluence()
         
@@ -200,7 +271,8 @@ class Game(gym.Env):
             fn(self.currentPlayer_action)
     
 
-
+    def getActivePlayer(self):
+        return int(self.activePlayer)
     
     def checkStatus(self):
         ## check the status of all the of all players
@@ -258,13 +330,13 @@ class Game(gym.Env):
         ## 5th variable is whether or not to challenge the attempted block
         maskList = []
         maskList.append(np.ndarray((len(actions.keys())), dtype=np.int8))
-        maskList.append(np.ndarray((self.nPlayers-1,), dtype=np.int8))
+        maskList.append(np.ndarray((self.nPlayers,), dtype=np.int8))
         maskList.append(np.ndarray((2,), dtype=np.int8))
         maskList.append(np.ndarray((2,), dtype=np.int8))
         maskList.append(np.ndarray((2,), dtype=np.int8))
 
         if(self.gameState == "Action"):
-            if self.playerList[playerIdx].Coins < 10:
+            if self.playerList[playerIdx].Coins < 10: ##10:
                 ## if player has >= 10 they can only perform a coup
                 ## and their only choice is which player to target
                 ## so we leave all mask values for actions at their default value of 0
@@ -278,6 +350,17 @@ class Game(gym.Env):
                     if action in ["Exchange", "Examine"]:
                         maskList[0][i] = 0
 
+                    ## should never actually get selected in action phase
+                    if action == "None":
+                        maskList[0][i] = 0
+
+            ## have >= 10 coins so can only perform coup
+            else:
+                self.DEBUG("Player has >= 10 coins so can only perform coup")
+                maskList[0][:] = 0
+                maskList[0][actionEnum["Coup"].value-1] = 1
+
+
             ## can only target players that are alive
             for id in range(1, self.nPlayers):
                 if self.playerList[(id + playerIdx) % self.nPlayers].isAlive:
@@ -285,25 +368,33 @@ class Game(gym.Env):
                 else:
                     maskList[1][id - 1] = 0
 
+            maskList[0][actionEnum["None"].value-1] = 0 ## don't allow no action
+            maskList[1][self.nPlayers - 1] = 0 ## don't allow no target 
 
         else:
             maskList[0][:] = 0
             maskList[1][:] = 0
+
+            maskList[0][actionEnum["None"].value-1] = 1 ## allow no action
+            maskList[1][self.nPlayers - 1] = 1 ## allow no target 
         
+        maskList[2][0] = 1
         if(self.gameState in ["Blocking_general", "Blocking_target"]):
-            maskList[2][:] = 1
+            maskList[2][1] = 1
         else:
-            maskList[2][:] = 0
+            maskList[2][1] = 0
 
+        maskList[3][0] = 1
         if(self.gameState in ["Challenge_general", "Challenge_target"]):
-            maskList[3][:] = 1
+            maskList[3][1] = 1
         else:
-            maskList[3][:] = 0
+            maskList[3][1] = 0
 
+        maskList[4][0] = 1
         if(self.gameState == "Challenge_block"):
-            maskList[4][:] = 1
+            maskList[4][1] = 1
         else:
-            maskList[4][:] = 0
+            maskList[4][1] = 0
 
         ## If in final reward state, player cant do anything
         if(self.gameState == "Rewards"):
@@ -316,12 +407,30 @@ class Game(gym.Env):
                 maskList[i][:] = 0
 
         self.DEBUG("Mask: ", maskList)
-        return tuple(maskList)
+
+        if(self._unravelActionSpace):
+            self.DEBUG("Unravelling mask")
+            unravelledMaskList = []
+
+            self.DEBUG("  Allowed actions after unravelling: ")
+            ## Now need to unravel the mask using the flattenedActionSpace found before
+            for action in self._unravelledActionSpace:
+                allAllowed = 1
+                for i, subAction in enumerate(action):
+                    allAllowed *= maskList[i][subAction]
+
+                if allAllowed: self.DEBUG("   ", self.action_array_to_string(action))
+                unravelledMaskList.append(allAllowed)
+
+            unravelledMaskList.append(0)
+            mask = np.array(unravelledMaskList)
+                
+        return mask
     
     def getObservation(self, playerIdx):
         self.DEBUG("Getting observation for player", self.playerList[playerIdx].Name, "at index", playerIdx)
         ## get observarion for player at index playerIdx in this games player list
-        observation = np.ndarray((self.nPlayers, 1 + MAX_CARDS))
+        observation = np.ndarray((self.nPlayers, 1 + MAX_CARDS), dtype=np.float32)
 
         ## first fill in the observation for this player, always the first row in the observation 
         ## so that any player will always see itself at the first position
@@ -345,7 +454,7 @@ class Game(gym.Env):
                     observation[otherPlayerCounter, 1 + i] = 0.0
 
         self.DEBUG("Observation Array:", observation)
-        return observation
+        return observation.flatten()
     
     def changeState(self, newState):
         if self.gameState == newState:
@@ -386,11 +495,15 @@ class Game(gym.Env):
 
         return "succeeded"
 
-    def step(self, action):
+    def _step(self, action):
         self.INFO("")
         self.INFO("##### Stepping #####")
         self.INFO("gameState:",self.gameState)
         self.DEBUG("specified actions:", action)
+        ## might need to re-ravel the action
+        if self._unravelActionSpace:
+            action = self._unravelledActionSpace[action]
+            self.DEBUG("unravelled actions:", action)
 
         self.DEBUG("Active player", self.playerList[self.activePlayer])
 
@@ -402,7 +515,7 @@ class Game(gym.Env):
         ret_info = {}
 
         ## set this so that on the outside, we know which player we should give the reward to 
-        ret_info["activePlayer"] = self.activePlayer
+        ret_info["activePlayerIndex"] = self.activePlayer
         ret_reward = self.playerList[self.activePlayer].claimReward()
 
         ## check what state we are in 
@@ -595,4 +708,19 @@ class Game(gym.Env):
         
         ret_info["mask"] = self.getMask(self.activePlayer)
         
-        return (self.getObservation(self.activePlayer), ret_reward, ret_terminated, ret_truncated, ret_info)
+        if not ret_terminated: 
+            step = ts.transition(reward = ret_reward, discount = 1.0, 
+                        observation ={"observation": self.getObservation(self.activePlayer),
+                                        "mask": ret_info["mask"],
+                                        "activePlayer": self.activePlayer
+                                        }
+                        )
+            
+        else: step = ts.termination(reward = ret_reward,
+                        observation ={"observation": self.getObservation(self.activePlayer),
+                                        "mask": ret_info["mask"],
+                                        "activePlayer": self.activePlayer
+                                        }
+                        )
+
+        return step
