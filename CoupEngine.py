@@ -6,6 +6,7 @@ from tf_agents.specs import BoundedArraySpec
 from tf_agents.environments import py_environment
 from tf_agents.trajectories import time_step as ts
 import itertools
+from abc import ABC, abstractmethod
 
 ## number of cards dealt to each player
 MAX_CARDS = 2
@@ -107,11 +108,8 @@ class Game(py_environment.PyEnvironment):
 
     ## for returning general info about the environment, not things necessarily needed by agents as observations
     def get_info(self):
-        ret_info = {}
 
-        ret_info["winner"] = self._winner
-
-        return ret_info
+        return self._info
         
 
 
@@ -195,6 +193,10 @@ class Game(py_environment.PyEnvironment):
         self._winner = -999
 
         self._stepCount = 0
+        self._info = {}
+
+        self._info["reward"] = 0
+        self._info["skippingTurn"] = False
 
         return ts.restart(observation ={"observation": self.getObservation(self.activePlayer),
                                         "mask": self.getMask(self.activePlayer),
@@ -507,8 +509,13 @@ class Game(py_environment.PyEnvironment):
     def _step(self, action):
         self.INFO("")
         self.INFO("##### Stepping :: Step {} #####".format(self._stepCount))
-        self.INFO("gameState:",self.gameState)
+        self.INFO("gameState:", self.gameState)
         self.DEBUG("specified actions:", action)
+
+        ## set default info values for this step
+        self._info["reward"] = 0
+        self._info["skippingTurn"] = False
+ 
         ## might need to re-ravel the action
         if self._unravelActionSpace:
             action = self._unravelledActionSpace[action]
@@ -531,6 +538,7 @@ class Game(py_environment.PyEnvironment):
         if(self.gameState == "Action"):
             if not self.playerList[self.currentPlayer_action].isAlive:
                 self.INFO(self.playerList[self.currentPlayer_action].Name, "is dead! skipping their action")
+                self._info["skippingTurn"] = True
                 self.currentPlayer_action = (self.currentPlayer_action + 1) % self.nPlayers
                 self.activePlayer = self.currentPlayer_action
 
@@ -590,6 +598,7 @@ class Game(py_environment.PyEnvironment):
         elif(self.gameState == "Blocking_general"): ## state in which any player can attempt to block the attempted action
             if not self.playerList[self.currentPlayer_block].isAlive:
                 self.INFO(self.playerList[self.currentPlayer_block].Name, "is dead so they can't really block anything")
+                self._info["skippingTurn"] = True
                 self.currentPlayer_block = (self.currentPlayer_block + 1) % self.nPlayers
                 self.activePlayer = self.currentPlayer_block
 
@@ -630,6 +639,7 @@ class Game(py_environment.PyEnvironment):
         elif(self.gameState == "Challenge_general"): ## any player can challenge the attempted action
             if not self.playerList[self.currentPlayer_challenge].isAlive:
                 self.INFO(self.playerList[self.currentPlayer_challenge].Name, "is dead so they can't really challenge anything")
+                self._info["skippingTurn"] = True
                 self.currentPlayer_challenge = (self.currentPlayer_challenge + 1) % self.nPlayers
                 self.activePlayer = self.currentPlayer_challenge
                
@@ -681,7 +691,9 @@ class Game(py_environment.PyEnvironment):
                 self.challenge(self.currentPlayer_action, self.currentPlayer_block, *actions[self.attemptedAction]["blockedBy"])
             else:
                 self.INFO("player", self.playerList[self.currentPlayer_action].Name, "accepts attempt by",self.playerList[self.currentPlayer_block].Name, "to block their action,", self.attemptedAction)
-        
+                self.playerList[self.currentPlayer_action].giveReward(-3)
+                self.playerList[self.currentPlayer_block].giveReward(3)
+
             self.currentPlayer_action = (self.currentPlayer_action + 1) % self.nPlayers
             self.changeState("Action")
             self.activePlayer = self.currentPlayer_action
@@ -709,12 +721,14 @@ class Game(py_environment.PyEnvironment):
             self.ERROR("Something has gone wrong, have ended up in an undefined state:", self.gameState)
             raise Exception()
         
-        
         if not ret_terminated:
             self.checkStatus()
         
         ## if the number of steps has gone above maximum, we'll truncate the game here
         ret_truncated = self._stepCount > self._maxSteps
+
+        self._info["winner"] = self._winner
+        self._info["reward"] = ret_reward
         
         if not ret_terminated: 
             if ret_truncated:
@@ -745,3 +759,21 @@ class Game(py_environment.PyEnvironment):
 
         self._stepCount += 1
         return step
+
+
+""" GameState class: Base state class for coup game engine. """
+class GameState(ABC):
+
+    def __init__(self, game: Game, initialPlayer: int):
+        """ Initialiser for GameSate objects. """
+
+        if(initialPlayer > game.nPlayers):
+            raise ValueError("The specified initial player is more than the number of players in the specified game")
+
+        self._game = game
+        self._initialPlayer = initialPlayer
+        self._currentPlayer = initialPlayer
+
+    @abstractmethod
+    def step(self, action: np.ndarray):
+        """ abstract method to step within the state, should advance the state of the Game object based on the provided action array. """
