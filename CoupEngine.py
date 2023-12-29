@@ -1,4 +1,4 @@
-from Logging import *
+import Logging
 import numpy as np
 from Cards import *
 from Player import *
@@ -38,7 +38,7 @@ DEBUG("actionString:", actionString)
 
 class Game(py_environment.PyEnvironment):
     nGames = 0
-    def __init__(self, nPlayers: int, allowInvalid: bool = False, name: str ="", unravelActionSpace: bool = False):
+    def __init__(self, nPlayers: int, allowInvalid: bool = False, name: str ="", unravelActionSpace: bool = False, logToFile: bool = False, maxSteps: int = np.inf):
         if name == "":
             self.name = "Game_" + str(Game.nGames)
         else:
@@ -46,7 +46,7 @@ class Game(py_environment.PyEnvironment):
             
         DEBUG("Initialising Game:", self.name, ", with", nPlayers, "players")
 
-        self.logger = Logger(GAME_LOG_LEVEL, self.name + "_Logger")
+        self.logger = Logging.Logger(logLevel = Logging.GAME_LOG_LEVEL, name = self.name + "_Logger", toFile = logToFile)
 
         ## make the action space spec
         ## 1st variable is which action to take in the "action" phase of the game
@@ -102,6 +102,7 @@ class Game(py_environment.PyEnvironment):
 
         Game.nGames += 1
 
+        self._maxSteps = maxSteps
         self._reset()
 
     def action_array_to_string(self, action: np.array) -> str:
@@ -186,6 +187,8 @@ class Game(py_environment.PyEnvironment):
 
         ret_info["mask"] = self.getMask(self.activePlayer)
         ret_info["activePlayerIndex"] = self.activePlayer
+
+        self._stepCount = 0
 
         return ts.restart(observation ={"observation": self.getObservation(self.activePlayer),
                                         "mask": ret_info["mask"],
@@ -497,7 +500,7 @@ class Game(py_environment.PyEnvironment):
 
     def _step(self, action):
         self.INFO("")
-        self.INFO("##### Stepping #####")
+        self.INFO("##### Stepping :: Step {} #####".format(self._stepCount))
         self.INFO("gameState:",self.gameState)
         self.DEBUG("specified actions:", action)
         ## might need to re-ravel the action
@@ -706,21 +709,37 @@ class Game(py_environment.PyEnvironment):
         if not ret_terminated:
             self.checkStatus()
         
+        ## if the number of steps has gone above maximum, we'll truncate the game here
+        ret_truncated = self._stepCount > self._maxSteps
+
         ret_info["mask"] = self.getMask(self.activePlayer)
         
         if not ret_terminated: 
-            step = ts.transition(reward = ret_reward, discount = 1.0, 
+            if ret_truncated:
+                self.INFO("::::: Game Truncated :::::")
+                step = ts.truncation(reward = ret_reward, discount = 1.0, 
+                        observation ={"observation": self.getObservation(self.activePlayer),
+                                        "mask": ret_info["mask"],
+                                        "activePlayer": self.activePlayer
+                                        }
+                        )
+                
+            else:
+                step = ts.transition(reward = ret_reward, discount = 1.0, 
                         observation ={"observation": self.getObservation(self.activePlayer),
                                         "mask": ret_info["mask"],
                                         "activePlayer": self.activePlayer
                                         }
                         )
             
-        else: step = ts.termination(reward = ret_reward,
-                        observation ={"observation": self.getObservation(self.activePlayer),
-                                        "mask": ret_info["mask"],
-                                        "activePlayer": self.activePlayer
-                                        }
-                        )
+        else: 
+            self.INFO("::::: Game Terminated :::::")
+            step = ts.termination(reward = ret_reward,
+                    observation ={"observation": self.getObservation(self.activePlayer),
+                                    "mask": ret_info["mask"],
+                                    "activePlayer": self.activePlayer
+                                    }
+                    )
 
+        self._stepCount += 1
         return step
