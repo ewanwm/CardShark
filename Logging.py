@@ -10,12 +10,23 @@ GAME_LOG_LEVEL = logLevels.kInfo
 
 class Logger:
     nLoggers = 0
-    def __init__(self, logLevel = LOG_LEVEL, name = ""):
+    def __init__(self, logLevel: logLevels = LOG_LEVEL, name: str = "", toFile: bool = False, fileName: str = ""):
         self.logLevel = logLevel
         if(name == ""):
             self.name = "Logger_" + str(Logger.nLoggers)
         else:
             self.name = name
+
+        self.printToFile = toFile
+        if toFile:
+            if fileName == "":
+                self.printFileName = "logs/" + self.name + ".log"
+            else:
+                self.printFileName = fileName
+
+            ## make the file, overwrite if one exists already
+            f = open(self.printFileName, "w")
+            f.close()
 
         print(datetime.datetime.now(), "- Logger", self.name, "created with log level", self.logLevel)
 
@@ -33,7 +44,13 @@ class Logger:
         else:
             indentStr = ""
             for _ in range(indent): indentStr += " "
-            print(indentStr + self.format(messageType), *messages)
+
+            if self.printToFile:
+                with open(self.printFileName, "a") as f:
+                    print(indentStr + self.format(messageType), *messages, file = f)
+
+            else:
+                print(indentStr + self.format(messageType), *messages)
 
     def error(self, *messages):
         self.log("ERROR", logLevels.kError, *messages)
@@ -66,6 +83,3 @@ def DEBUG(*messages):
     
 def TRACE(*messages):
     mainLogger.trace(*messages)
-
-
-
