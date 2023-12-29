@@ -105,6 +105,16 @@ class Game(py_environment.PyEnvironment):
         self._maxSteps = maxSteps
         self._reset()
 
+    ## for returning general info about the environment, not things necessarily needed by agents as observations
+    def get_info(self):
+        ret_info = {}
+
+        ret_info["winner"] = self._winner
+
+        return ret_info
+        
+
+
     def action_array_to_string(self, action: np.array) -> str:
         ## make the action space spec
         ## 1st variable is which action to take in the "action" phase of the game
@@ -150,7 +160,7 @@ class Game(py_environment.PyEnvironment):
         self.DEBUG("  Unravelled action space:", self._unravelledActionSpace)
         self.DEBUG("  Number of possible actions:", len(self._unravelledActionSpace))
 
-        self._action_spec = BoundedArraySpec(minimum = 0, maximum = len(self._unravelledActionSpace), shape=(), dtype=np.int32)
+        self._action_spec = BoundedArraySpec(minimum = 0, maximum = len(self._unravelledActionSpace) - 1, shape=(), dtype=np.int32)
 
         return
     
@@ -182,16 +192,12 @@ class Game(py_environment.PyEnvironment):
         self.action_target = 999
         self.currentPlayer_block = 999
         self.currentPlayer_challenge = 999
-
-        ret_info = {}
-
-        ret_info["mask"] = self.getMask(self.activePlayer)
-        ret_info["activePlayerIndex"] = self.activePlayer
+        self._winner = -999
 
         self._stepCount = 0
 
         return ts.restart(observation ={"observation": self.getObservation(self.activePlayer),
-                                        "mask": ret_info["mask"],
+                                        "mask": self.getMask(self.activePlayer),
                                         "activePlayer": self.activePlayer
                                         }
                          )
@@ -305,10 +311,11 @@ class Game(py_environment.PyEnvironment):
         if aliveCount == 1:
             self.INFO("=========== GAME OVER ===========")
             
-            for player in self.playerList:
+            for playerIdx, player in enumerate(self.playerList):
                 if player.isAlive:
                     self.INFO("")
                     self.INFO("  ** Player", player, "Wins! **")
+                    self._winner = playerIdx
                     player.giveReward(50)
 
                     ## move to special reward round state
@@ -425,7 +432,6 @@ class Game(py_environment.PyEnvironment):
                 if allAllowed: self.DEBUG("   ", self.action_array_to_string(action))
                 unravelledMaskList.append(allAllowed)
 
-            unravelledMaskList.append(0)
             mask = np.array(unravelledMaskList)
                 
         return mask
@@ -515,10 +521,8 @@ class Game(py_environment.PyEnvironment):
         ret_reward = 0
         ret_terminated = False
         ret_truncated = False
-        ret_info = {}
 
         ## set this so that on the outside, we know which player we should give the reward to 
-        ret_info["activePlayerIndex"] = self.activePlayer
         ret_reward = self.playerList[self.activePlayer].claimReward()
 
         ## check what state we are in 
@@ -711,15 +715,13 @@ class Game(py_environment.PyEnvironment):
         
         ## if the number of steps has gone above maximum, we'll truncate the game here
         ret_truncated = self._stepCount > self._maxSteps
-
-        ret_info["mask"] = self.getMask(self.activePlayer)
         
         if not ret_terminated: 
             if ret_truncated:
                 self.INFO("::::: Game Truncated :::::")
                 step = ts.truncation(reward = ret_reward, discount = 1.0, 
                         observation ={"observation": self.getObservation(self.activePlayer),
-                                        "mask": ret_info["mask"],
+                                        "mask": self.getMask(self.activePlayer),
                                         "activePlayer": self.activePlayer
                                         }
                         )
@@ -727,7 +729,7 @@ class Game(py_environment.PyEnvironment):
             else:
                 step = ts.transition(reward = ret_reward, discount = 1.0, 
                         observation ={"observation": self.getObservation(self.activePlayer),
-                                        "mask": ret_info["mask"],
+                                        "mask": self.getMask(self.activePlayer),
                                         "activePlayer": self.activePlayer
                                         }
                         )
@@ -736,7 +738,7 @@ class Game(py_environment.PyEnvironment):
             self.INFO("::::: Game Terminated :::::")
             step = ts.termination(reward = ret_reward,
                     observation ={"observation": self.getObservation(self.activePlayer),
-                                    "mask": ret_info["mask"],
+                                    "mask": self.getMask(self.activePlayer),
                                     "activePlayer": self.activePlayer
                                     }
                     )
