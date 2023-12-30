@@ -529,9 +529,6 @@ class Game(py_environment.PyEnvironment):
         ret_terminated = False
         ret_truncated = False
 
-        ## set this so that on the outside, we know which player we should give the reward to 
-        ret_reward = self.playerList[self.activePlayer].claimReward()
-
         ## check what state we are in 
 
         ##### ACTION STATE #####
@@ -705,13 +702,10 @@ class Game(py_environment.PyEnvironment):
         ##### REWARDS STATE #####
         elif(self.gameState == "Rewards"): ## target of an action can either block or challenge the action
             player = self.playerList[self.activePlayer]
-            reward = player.claimReward()
-            self.INFO("Player", player.Name, "Final reward:", reward)
             
             self.currentPlayer_Reward = (self.currentPlayer_Reward + 1) % self.nPlayers
             self.activePlayer = self.currentPlayer_Reward
         
-            ret_reward = reward
 
             if self.currentPlayer_Reward == 0:
                 self.INFO("========= DONE HANDING OUT REWARDS ==========")
@@ -726,6 +720,9 @@ class Game(py_environment.PyEnvironment):
         
         ## if the number of steps has gone above maximum, we'll truncate the game here
         ret_truncated = self._stepCount > self._maxSteps
+
+        ## set this so that on the outside, we know which player we should give the reward to 
+        ret_reward = self.playerList[self.activePlayer].claimReward()
 
         self._info["winner"] = self._winner
         self._info["reward"] = ret_reward
