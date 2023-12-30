@@ -1,4 +1,5 @@
 from Logging import *
+import numpy as np
 import tensorflow as tf
 from tf_agents.trajectories import trajectory
 from tf_agents.replay_buffers.tf_uniform_replay_buffer import TFUniformReplayBuffer
@@ -23,6 +24,7 @@ class MultiAgent(DqnAgent):
                  ## optional args for MultiAgent
                  batchSize_train: int = 4,
                  maxBufferLength: int = 1000,
+                 applyMask: bool = True,
                  ## optional DqnAgent args
                  **DqnAgent_args
                  ):
@@ -34,6 +36,8 @@ class MultiAgent(DqnAgent):
             self.Name = AgentName
 
         self.logger = logger
+
+        self._applyMask = applyMask
 
         self._time_step_spec = time_step_spec
         self.DEBUG("TIME STEP SPEC:", self._time_step_spec)
@@ -81,8 +85,23 @@ class MultiAgent(DqnAgent):
 
         self.experienceIterator = iter(self.experienceDataset)
 
+        self._gameOutcomes = []
+        self._rewards = []
+
         MultiAgent.nAgents += 1
         
+    def _registerOutcome(self, outcome: int):
+        ## add outcome to internal list of game outcomes (-1 for loss, 0 for inconclusive (game truncated), and +1 for win)
+        self._gameOutcomes.append(outcome)
+
+    def registerWin(self):
+        self._registerOutcome(+1)
+
+    def registerLoss(self):
+        self.registerOutcome(-1)
+    
+    def registerInconclusive(self):
+        self._registerOutcome(0)
     
     ## wrap the logger functions... must be a nicer way of doing this...
     def ERROR(self, *messages): 
@@ -98,12 +117,17 @@ class MultiAgent(DqnAgent):
 
     ## Function to extract the observations and mask values to pass to the model
     def obs_constraint_splitter(self):
-        def retFn(observationDict):
+        if self._applyMask:
+            def retFn(observationDict):
 
-            self.TRACE("Observation dict:", observationDict)
-            return (observationDict["observations"], observationDict["mask"]) ##flattenedActionMask)
+                self.TRACE("Observation dict:", observationDict)
+                return (observationDict["observations"], observationDict["mask"]) ##flattenedActionMask)
 
-        return retFn
+            return retFn
+        
+        ## can just return none then won't be used when initialising the DQN agent
+        else:
+            return None
     
     # Define a helper function to create Dense layers configured with the right
     # activation and kernel initializer.
@@ -116,7 +140,7 @@ class MultiAgent(DqnAgent):
 
     def _build_q_net(self):
 
-        fc_layer_params = (50,50)
+        fc_layer_params = (100,100)
 
         # QNetwork consists of a sequence of Dense layers followed by a dense layer
         # with `num_actions` units to generate one q_value per available action as
@@ -168,6 +192,8 @@ class MultiAgent(DqnAgent):
 
             self._replay_buffer.add_batch(traj)
 
+            self._rewards.append(self.currentStep.reward.numpy()[0])
+
     def trainAgent(self):
         self.INFO("Training agent", self.name)
 
@@ -176,10 +202,26 @@ class MultiAgent(DqnAgent):
         train_loss = self.train(experience).loss
         self.losses.append(train_loss)
 
-    def plotLosses(self):
+    def plotTrainingLosses(self):
         plt.plot(list(range(len(self.losses))), self.losses)
         plt.title(self.Name + " Losses")
         plt.xlabel("Epoch")
         plt.ylabel("Loss")
         plt.show()
+
+    def plotRewards(self):
+        plt.plot(list(range(len(self._rewards))), self._rewards)
+        plt.title(self.Name + " Rewards")
+        plt.xlabel("Step")
+        plt.ylabel("Reward")
+        plt.show()
+        
+
+    def getWinRate(self) -> float:
+        if len(self._gameOutcomes) == 0:
+            return 0.0
+        
+        else:
+            return np.count(np.array(self._gameOutcomes) == 1) / len(self._gameOutcomes)
+
             
