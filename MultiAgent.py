@@ -1,6 +1,6 @@
 from Logging import *
 import numpy as np
-import tensorflow as tf
+from tensorflow import keras
 from tf_agents.trajectories import trajectory
 from tf_agents.replay_buffers.tf_uniform_replay_buffer import TFUniformReplayBuffer
 from tf_agents.agents.dqn.dqn_agent import DqnAgent
@@ -8,8 +8,6 @@ from tf_agents.networks import sequential
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
 import matplotlib.pyplot as plt
-
-
 
 class MultiAgent(DqnAgent):
     nAgents = 0
@@ -132,10 +130,10 @@ class MultiAgent(DqnAgent):
     # Define a helper function to create Dense layers configured with the right
     # activation and kernel initializer.
     def dense_layer(self, num_units):
-        return tf.keras.layers.Dense(
+        return keras.layers.Dense(
             num_units,
-            activation=tf.keras.activations.relu,
-            kernel_initializer=tf.keras.initializers.VarianceScaling(
+            activation=keras.activations.relu,
+            kernel_initializer=keras.initializers.VarianceScaling(
                 scale=2.0, mode='fan_in', distribution='truncated_normal'))
 
     def _build_q_net(self):
@@ -147,12 +145,12 @@ class MultiAgent(DqnAgent):
         # its output.
         dense_layers = [self.dense_layer(num_units) for num_units in fc_layer_params]
         
-        q_values_layer = tf.keras.layers.Dense(
+        q_values_layer = keras.layers.Dense(
             self._action_spec.maximum +1,
             activation=None,
-            kernel_initializer=tf.keras.initializers.RandomUniform(
+            kernel_initializer=keras.initializers.RandomUniform(
                 minval=-0.03, maxval=0.03),
-            bias_initializer=tf.keras.initializers.Constant(-0.2))
+            bias_initializer=keras.initializers.Constant(-0.2))
         
         self.q_net = sequential.Sequential(dense_layers + [q_values_layer])
         
@@ -201,6 +199,8 @@ class MultiAgent(DqnAgent):
         experience, unused_info = next(self.experienceIterator)
         train_loss = self.train(experience).loss
         self.losses.append(train_loss)
+
+        return train_loss
 
     def plotTrainingLosses(self):
         plt.plot(list(range(len(self.losses))), self.losses)
