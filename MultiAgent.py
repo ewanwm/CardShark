@@ -1,15 +1,20 @@
 from Logging import *
 import numpy as np
 from tensorflow import keras
+from tensorflow import function as tfFunction
+from tensorflow import Variable
 from tf_agents.trajectories import trajectory
+from tf_agents.policies.random_tf_policy import RandomTFPolicy
 from tf_agents.replay_buffers.tf_uniform_replay_buffer import TFUniformReplayBuffer
 from tf_agents.agents.dqn.dqn_agent import DqnAgent
+from tf_agents.networks import categorical_q_network
+from tf_agents.agents.categorical_dqn import categorical_dqn_agent
 from tf_agents.networks import sequential
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
 import matplotlib.pyplot as plt
 
-class MultiAgent(DqnAgent):
+class MultiAgent(categorical_dqn_agent.CategoricalDqnAgent):
     nAgents = 0
 
     def __init__(self,
@@ -17,6 +22,7 @@ class MultiAgent(DqnAgent):
                  time_step_spec: ts.TimeStep,
                  action_spec: types.NestedTensorSpec,
                  optimizer: types.Optimizer,
+                 observation_spec = None,
                  logger: Logger = None,
                  AgentName: str = "",
                  ## optional args for MultiAgent
@@ -39,6 +45,12 @@ class MultiAgent(DqnAgent):
 
         self._time_step_spec = time_step_spec
         self.DEBUG("TIME STEP SPEC:", self._time_step_spec)
+
+
+        if observation_spec == None:
+            self._observation_spec = self._time_step_spec.observation
+        else:
+            self._observation_spec = observation_spec
        
 
         self._action_spec = action_spec
@@ -47,25 +59,30 @@ class MultiAgent(DqnAgent):
 
         self._build_q_net()
 
-        self.losses = []
-
-        DqnAgent.__init__(
-            self,
-            time_step_spec = self._time_step_spec, 
-            action_spec = self._action_spec, 
-            q_network = self.q_net, 
-            observation_and_action_constraint_splitter = self.obs_constraint_splitter(),
-            optimizer = optimizer, 
+        categorical_dqn_agent.CategoricalDqnAgent.__init__(self,
+            self._time_step_spec,
+            self._action_spec,
+            categorical_q_network=self.q_net,
+            optimizer = keras.optimizers.Adam(learning_rate=1e-3),
+            min_q_value=-20,
+            max_q_value=20,
+            n_step_update=2,
+            observation_and_action_constraint_splitter=self.obs_constraint_splitter(),
+            gamma=0.99,
+            train_step_counter=Variable(0)
         )
+
+        self.initialize()
 
         self.DEBUG("DQN agent initialised!")
         self.q_net.summary()
+
+        self.randomPolicy = RandomTFPolicy(self._time_step_spec, self._action_spec, observation_and_action_constraint_splitter = self.obs_constraint_splitter())
         
         self.batchSize_train = batchSize_train
         self.currentStep = None
         self.lastStep = None
         self.lastPolicyStep = None
-        self.trajBuffer = []
 
         self._replay_buffer = TFUniformReplayBuffer(
             data_spec=self.training_data_spec,
@@ -77,12 +94,13 @@ class MultiAgent(DqnAgent):
         self.DEBUG("           With data spec:", self._replay_buffer.data_spec)
 
         self.experienceDataset = self._replay_buffer.as_dataset(
-        num_parallel_calls=3,
-        sample_batch_size=self.batchSize_train,
-        num_steps=2).prefetch(3)
+            num_parallel_calls=3,
+            sample_batch_size=self.batchSize_train,
+            num_steps=2 + 1).prefetch(3)
 
         self.experienceIterator = iter(self.experienceDataset)
-
+        
+        self.losses = []
         self._gameOutcomes = []
         self._rewards = []
 
@@ -116,6 +134,7 @@ class MultiAgent(DqnAgent):
     ## Function to extract the observations and mask values to pass to the model
     def obs_constraint_splitter(self):
         if self._applyMask:
+            #@tfFunction
             def retFn(observationDict):
 
                 self.TRACE("Observation dict:", observationDict)
@@ -134,25 +153,15 @@ class MultiAgent(DqnAgent):
             num_units,
             activation=keras.activations.relu,
             kernel_initializer=keras.initializers.VarianceScaling(
-                scale=2.0, mode='fan_in', distribution='truncated_normal'))
+                scale=0.1, mode='fan_in', distribution='truncated_normal'))
 
     def _build_q_net(self):
 
-        fc_layer_params = (100,100)
-
-        # QNetwork consists of a sequence of Dense layers followed by a dense layer
-        # with `num_actions` units to generate one q_value per available action as
-        # its output.
-        dense_layers = [self.dense_layer(num_units) for num_units in fc_layer_params]
-        
-        q_values_layer = keras.layers.Dense(
-            self._action_spec.maximum +1,
-            activation=None,
-            kernel_initializer=keras.initializers.RandomUniform(
-                minval=-0.03, maxval=0.03),
-            bias_initializer=keras.initializers.Constant(-0.2))
-        
-        self.q_net = sequential.Sequential(dense_layers + [q_values_layer])
+        self.q_net = categorical_q_network.CategoricalQNetwork(
+            self._observation_spec,
+            self._action_spec,
+            fc_layer_params=(100,)
+        )
         
         return
 
@@ -160,8 +169,12 @@ class MultiAgent(DqnAgent):
         self.lastStep = self.currentStep
         self.currentStep = timeStep
 
-    def getAction(self, timeStep: tuple, collect: bool = False):
-        if collect:
+    def getAction(self, timeStep: tuple, collect: bool = False, random: bool = False):
+        if random and collect:
+            raise ValueError("have specified both collect and random policy, this is invalid")
+        if random:
+            policy_step = self.randomPolicy.action(self.currentStep)
+        elif collect:
             policy_step = self.collect_policy.action(self.currentStep)
         else:
             policy_step = self.policy.action(self.currentStep)
@@ -169,35 +182,36 @@ class MultiAgent(DqnAgent):
         self.lastPolicyStep = policy_step
 
         action = policy_step.action
-        
+
         self.DEBUG("Passing action", action, "to env")
         
         return action
     
-    def _addBatch(self):
-        self._replay_buffer.add_batch(self.trajBuffer)
 
     def addFrame(self):
         if((self.lastStep != None) and (self.currentStep != None) and (self.lastPolicyStep != None)):
-            self.TRACE("Adding Batch")
-            self.TRACE("  last time step:   ", self.lastStep)
-            self.TRACE("  last action:      ", self.lastPolicyStep)
-            self.TRACE("  current time step:", self.currentStep)
+            self.DEBUG("Adding Frame")
+            self.DEBUG("  last time step:   ", self.lastStep)
+            self.DEBUG("  last action:      ", self.lastPolicyStep)
+            self.DEBUG("  current time step:", self.currentStep)
 
             traj = trajectory.from_transition(time_step = self.lastStep, 
                                               action_step = self.lastPolicyStep, 
                                               next_time_step = self.currentStep)
 
+            self.DEBUG("  Trajectory:", traj)
             self._replay_buffer.add_batch(traj)
 
             self._rewards.append(self.currentStep.reward.numpy()[0])
 
     def trainAgent(self):
-        self.INFO("Training agent", self.name)
+        self.DEBUG("::: Training agent :::", self.name)
 
-         # Sample a batch of data from the buffer and update the agent's network.
+        # Sample a batch of data from the buffer and update the agent's network.
         experience, unused_info = next(self.experienceIterator)
+        self.DEBUG("  using experience:", experience)
         train_loss = self.train(experience).loss
+        self.DEBUG("  Loss:", train_loss)
         self.losses.append(train_loss)
 
         return train_loss
@@ -216,7 +230,6 @@ class MultiAgent(DqnAgent):
         plt.ylabel("Reward")
         plt.show()
         
-
     def getWinRate(self) -> float:
         if len(self._gameOutcomes) == 0:
             return 0.0
