@@ -21,14 +21,14 @@ class MultiAgent(categorical_dqn_agent.CategoricalDqnAgent):
                  ## positional args to pass through to the DqnAgent
                  time_step_spec: ts.TimeStep,
                  action_spec: types.NestedTensorSpec,
-                 optimizer: types.Optimizer,
+                 ## optional args for MultiAgent
                  observation_spec = None,
                  logger: Logger = None,
                  AgentName: str = "",
-                 ## optional args for MultiAgent
                  batchSize_train: int = 4,
                  maxBufferLength: int = 1000,
                  applyMask: bool = True,
+                 fc_layer_params: tuple = (100,),
                  ## optional DqnAgent args
                  **DqnAgent_args
                  ):
@@ -57,7 +57,7 @@ class MultiAgent(categorical_dqn_agent.CategoricalDqnAgent):
         self.DEBUG("ACTION SPEC SHAPE:", self._action_spec.shape)
         self.DEBUG("ACTION SPEC:", self._action_spec)
 
-        self._build_q_net()
+        self._build_q_net(fc_layer_params)
 
         categorical_dqn_agent.CategoricalDqnAgent.__init__(self,
             self._time_step_spec,
@@ -145,22 +145,13 @@ class MultiAgent(categorical_dqn_agent.CategoricalDqnAgent):
         ## can just return none then won't be used when initialising the DQN agent
         else:
             return None
-    
-    # Define a helper function to create Dense layers configured with the right
-    # activation and kernel initializer.
-    def dense_layer(self, num_units):
-        return keras.layers.Dense(
-            num_units,
-            activation=keras.activations.relu,
-            kernel_initializer=keras.initializers.VarianceScaling(
-                scale=0.1, mode='fan_in', distribution='truncated_normal'))
 
-    def _build_q_net(self):
+    def _build_q_net(self, fc_layer_params):
 
         self.q_net = categorical_q_network.CategoricalQNetwork(
             self._observation_spec,
             self._action_spec,
-            fc_layer_params=(100,)
+            fc_layer_params=fc_layer_params
         )
         
         return
@@ -186,7 +177,6 @@ class MultiAgent(categorical_dqn_agent.CategoricalDqnAgent):
         self.DEBUG("Passing action", action, "to env")
         
         return action
-    
 
     def addFrame(self):
         if((self.lastStep != None) and (self.currentStep != None) and (self.lastPolicyStep != None)):
