@@ -63,13 +63,13 @@ class MultiAgent(categorical_dqn_agent.CategoricalDqnAgent):
             self._time_step_spec,
             self._action_spec,
             categorical_q_network=self.q_net,
-            optimizer = keras.optimizers.Adam(learning_rate=1e-3),
             min_q_value=-20,
             max_q_value=20,
             n_step_update=2,
             observation_and_action_constraint_splitter=self.obs_constraint_splitter(),
             gamma=0.99,
-            train_step_counter=Variable(0)
+            train_step_counter=Variable(0),
+            **DqnAgent_args
         )
 
         self.initialize()
