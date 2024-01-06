@@ -20,46 +20,65 @@ class MultiAgent():
     nAgents = 0
 
     def __init__(self,
-                 ## positional args to pass through to the DqnAgent
-                 time_step_spec: ts.TimeStep,
-                 action_spec: types.NestedTensorSpec,
-                 ## optional args for MultiAgent
-                 observation_spec = None,
-                 logger: Logger = None,
-                 agent_name: str = "",
-                 train_batch_size: int = 4,
-                 max_buffer_length: int = 1000,
-                 apply_mask: bool = True,
-                 fc_layer_params: tuple = (100,),
-                 checkpoint_path: str = None,
-                 ## optional DqnAgent args
-                 **DqnAgent_args
-                 ):
+            ## positional args to pass through to the DqnAgent
+            time_step_spec: ts.TimeStep,
+            action_spec: types.NestedTensorSpec,
+            ## optional args for MultiAgent
+            observation_spec = None,
+            logger: Logger = None,
+            agent_name: str = "",
+            train_batch_size: int = 4,
+            max_buffer_length: int = 1000,
+            apply_mask: bool = True,
+            fc_layer_params: tuple = (100,),
+            checkpoint_path: str = None,
+            ## optional DqnAgent args
+            **DqnAgent_args
+        ):
         
+        
+        ## set optional properties
         if agent_name == "":
             self.Name = "Agent_" + str(MultiAgent.nAgents)
-            
         else: 
             self.Name = agent_name
-
-        self.logger = logger
-
-        self._apply_mask = apply_mask
-
-        self._time_step_spec = time_step_spec
-        self.DEBUG("TIME STEP SPEC:", self._time_step_spec)
 
         if observation_spec == None:
             self._observation_spec = self._time_step_spec.observation
         else:
-            self._observation_spec = observation_spec       
+            self._observation_spec = observation_spec  
+
+        if checkpoint_path == None:
+            checkpoint_path = os.path.join("Checkpoints", self.Name)
+
+        self._checkpoint_path = checkpoint_path
+        
+
+        ## Set specified properties
+        self.logger = logger
+        self._apply_mask = apply_mask
+        self.train_bs = train_batch_size
+    
+        self._time_step_spec = time_step_spec
+        self.DEBUG("TIME STEP SPEC:", self._time_step_spec)
 
         self._action_spec = action_spec
-        self.DEBUG("ACTION SPEC SHAPE:", self._action_spec.shape)
         self.DEBUG("ACTION SPEC:", self._action_spec)
 
-        self._build_q_net(fc_layer_params)
+
+        ## Set inital values
+        self.losses = []
+        self._game_outcomes = []
+        self._rewards = []
         self._step = Variable(0)
+
+        self.random_policy = RandomTFPolicy(self._time_step_spec, self._action_spec, observation_and_action_constraint_splitter = self.obs_constraint_splitter())
+        self.current_step = None
+        self.last_step = None
+        self.last_policy_step = None
+
+        ## Build the agent
+        self._build_q_net(fc_layer_params)
 
         self._agent = categorical_dqn_agent.CategoricalDqnAgent(
             self._time_step_spec,
@@ -79,13 +98,7 @@ class MultiAgent():
         self.DEBUG("DQN agent initialised!")
         self.q_net.summary()
 
-        self.random_policy = RandomTFPolicy(self._time_step_spec, self._action_spec, observation_and_action_constraint_splitter = self.obs_constraint_splitter())
-        
-        self.train_bs = train_batch_size
-        self.current_step = None
-        self.last_step = None
-        self.last_policy_step = None
-
+        ## Build the replay buffer
         self._replay_buffer = TFUniformReplayBuffer(
             data_spec=self._agent.training_data_spec,
             batch_size=1,
@@ -102,14 +115,7 @@ class MultiAgent():
 
         self.experience_iterator = iter(self.experience_dataset)
         
-        self.losses = []
-        self._game_outcomes = []
-        self._rewards = []
-
-        if checkpoint_path == None:
-            checkpoint_path = os.path.join("Checkpoints", self.Name)
-
-        self._checkpoint_path = checkpoint_path
+        ## make the checkpointer
         self._trainCheckpointer = common.Checkpointer(
             ckpt_dir = self._checkpoint_path,
             max_to_keep = 1,
