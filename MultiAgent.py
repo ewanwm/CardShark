@@ -26,25 +26,25 @@ class MultiAgent():
                  ## optional args for MultiAgent
                  observation_spec = None,
                  logger: Logger = None,
-                 AgentName: str = "",
-                 batchSize_train: int = 4,
-                 maxBufferLength: int = 1000,
-                 applyMask: bool = True,
-                 fcLayerParams: tuple = (100,),
-                 checkpointPath: str = None,
+                 agent_name: str = "",
+                 train_batch_size: int = 4,
+                 max_buffer_length: int = 1000,
+                 apply_mask: bool = True,
+                 fc_layer_params: tuple = (100,),
+                 checkpoint_path: str = None,
                  ## optional DqnAgent args
                  **DqnAgent_args
                  ):
         
-        if AgentName == "":
+        if agent_name == "":
             self.Name = "Agent_" + str(MultiAgent.nAgents)
             
         else: 
-            self.Name = AgentName
+            self.Name = agent_name
 
         self.logger = logger
 
-        self._applyMask = applyMask
+        self._apply_mask = apply_mask
 
         self._time_step_spec = time_step_spec
         self.DEBUG("TIME STEP SPEC:", self._time_step_spec)
@@ -58,7 +58,7 @@ class MultiAgent():
         self.DEBUG("ACTION SPEC SHAPE:", self._action_spec.shape)
         self.DEBUG("ACTION SPEC:", self._action_spec)
 
-        self._build_q_net(fcLayerParams)
+        self._build_q_net(fc_layer_params)
         self._step = Variable(0)
 
         self._agent = categorical_dqn_agent.CategoricalDqnAgent(
@@ -79,39 +79,39 @@ class MultiAgent():
         self.DEBUG("DQN agent initialised!")
         self.q_net.summary()
 
-        self.randomPolicy = RandomTFPolicy(self._time_step_spec, self._action_spec, observation_and_action_constraint_splitter = self.obs_constraint_splitter())
+        self.random_policy = RandomTFPolicy(self._time_step_spec, self._action_spec, observation_and_action_constraint_splitter = self.obs_constraint_splitter())
         
-        self.batchSize_train = batchSize_train
-        self.currentStep = None
-        self.lastStep = None
-        self.lastPolicyStep = None
+        self.train_bs = train_batch_size
+        self.current_step = None
+        self.last_step = None
+        self.last_policy_step = None
 
         self._replay_buffer = TFUniformReplayBuffer(
             data_spec=self._agent.training_data_spec,
             batch_size=1,
-            max_length=maxBufferLength
+            max_length=max_buffer_length
         )
 
         self.DEBUG("Replay buffer initialised:", self._replay_buffer)
         self.DEBUG("           With data spec:", self._replay_buffer.data_spec)
 
-        self.experienceDataset = self._replay_buffer.as_dataset(
+        self.experience_dataset = self._replay_buffer.as_dataset(
             num_parallel_calls=3,
-            sample_batch_size=self.batchSize_train,
+            sample_batch_size=self.train_bs,
             num_steps=2 + 1).prefetch(3)
 
-        self.experienceIterator = iter(self.experienceDataset)
+        self.experience_iterator = iter(self.experience_dataset)
         
         self.losses = []
-        self._gameOutcomes = []
+        self._game_outcomes = []
         self._rewards = []
 
-        if checkpointPath == None:
-            checkpointPath = os.path.join("Checkpoints", self.Name)
+        if checkpoint_path == None:
+            checkpoint_path = os.path.join("Checkpoints", self.Name)
 
-        self._checkpointPath = checkpointPath
+        self._checkpoint_path = checkpoint_path
         self._trainCheckpointer = common.Checkpointer(
-            ckpt_dir = self._checkpointPath,
+            ckpt_dir = self._checkpoint_path,
             max_to_keep = 1,
             agent = self._agent,
             policy = self._agent.policy,
@@ -129,18 +129,18 @@ class MultiAgent():
         self._trainCheckpointer.initialize_or_restore()
         print(self._agent.policy)
 
-    def _registerOutcome(self, outcome: int):
+    def _register_outcome(self, outcome: int):
         ## add outcome to internal list of game outcomes (-1 for loss, 0 for inconclusive (game truncated), and +1 for win)
-        self._gameOutcomes.append(outcome)
+        self._game_outcomes.append(outcome)
 
-    def registerWin(self):
-        self._registerOutcome(+1)
+    def register_win(self):
+        self._register_outcome(+1)
 
-    def registerLoss(self):
-        self.registerOutcome(-1)
+    def register_loss(self):
+        self.register_outcome(-1)
     
-    def registerInconclusive(self):
-        self._registerOutcome(0)
+    def register_inconclusive(self):
+        self._register_outcome(0)
     
     ## wrap the logger functions... must be a nicer way of doing this...
     def ERROR(self, *messages): 
@@ -156,7 +156,7 @@ class MultiAgent():
 
     ## Function to extract the observations and mask values to pass to the model
     def obs_constraint_splitter(self):
-        if self._applyMask:
+        if self._apply_mask:
             #@tfFunction
             def retFn(observationDict):
 
@@ -169,31 +169,31 @@ class MultiAgent():
         else:
             return None
 
-    def _build_q_net(self, fcLayerParams):
+    def _build_q_net(self, fc_layer_params):
 
         self.q_net = categorical_q_network.CategoricalQNetwork(
             self._observation_spec,
             self._action_spec,
-            fc_layer_params=fcLayerParams
+            fc_layer_params=fc_layer_params
         )
         
         return
 
-    def setCurrentStep(self, timeStep: tuple):
-        self.lastStep = self.currentStep
-        self.currentStep = timeStep
+    def set_current_step(self, timeStep: tuple):
+        self.last_step = self.current_step
+        self.current_step = timeStep
 
-    def getAction(self, timeStep: tuple, collect: bool = False, random: bool = False):
+    def get_action(self, timeStep: tuple, collect: bool = False, random: bool = False):
         if random and collect:
             raise ValueError("have specified both collect and random policy, this is invalid")
         if random:
-            policy_step = self.randomPolicy.action(self.currentStep)
+            policy_step = self.random_policy.action(self.current_step)
         elif collect:
-            policy_step = self.collect_policy.action(self.currentStep)
+            policy_step = self.collect_policy.action(self.current_step)
         else:
-            policy_step = self._agent.policy.action(self.currentStep)
+            policy_step = self._agent.policy.action(self.current_step)
 
-        self.lastPolicyStep = policy_step
+        self.last_policy_step = policy_step
 
         action = policy_step.action
 
@@ -201,27 +201,27 @@ class MultiAgent():
         
         return action
 
-    def addFrame(self):
-        if((self.lastStep != None) and (self.currentStep != None) and (self.lastPolicyStep != None)):
+    def add_frame(self):
+        if((self.last_step != None) and (self.current_step != None) and (self.last_policy_step != None)):
             self.DEBUG("Adding Frame")
-            self.DEBUG("  last time step:   ", self.lastStep)
-            self.DEBUG("  last action:      ", self.lastPolicyStep)
-            self.DEBUG("  current time step:", self.currentStep)
+            self.DEBUG("  last time step:   ", self.last_step)
+            self.DEBUG("  last action:      ", self.last_policy_step)
+            self.DEBUG("  current time step:", self.current_step)
 
-            traj = trajectory.from_transition(time_step = self.lastStep, 
-                                              action_step = self.lastPolicyStep, 
-                                              next_time_step = self.currentStep)
+            traj = trajectory.from_transition(time_step = self.last_step, 
+                                              action_step = self.last_policy_step, 
+                                              next_time_step = self.current_step)
 
             self.DEBUG("  Trajectory:", traj)
             self._replay_buffer.add_batch(traj)
 
-            self._rewards.append(self.currentStep.reward.numpy()[0])
+            self._rewards.append(self.current_step.reward.numpy()[0])
 
-    def trainAgent(self):
+    def train_agent(self):
         self.DEBUG("::: Training agent :::", self.Name)
 
         # Sample a batch of data from the buffer and update the agent's network.
-        experience, unused_info = next(self.experienceIterator)
+        experience, unused_info = next(self.experience_iterator)
         self.DEBUG("  using experience:", experience)
         train_loss = self._agent.train(experience).loss
         self.DEBUG("  Loss:", train_loss)
@@ -229,25 +229,25 @@ class MultiAgent():
 
         return train_loss
 
-    def plotTrainingLosses(self):
+    def plot_training_losses(self):
         plt.plot(list(range(len(self.losses))), self.losses)
         plt.title(self.Name + " Losses")
         plt.xlabel("Epoch")
         plt.ylabel("Loss")
         plt.show()
 
-    def plotRewards(self):
+    def plot_rewards(self):
         plt.plot(list(range(len(self._rewards))), self._rewards)
         plt.title(self.Name + " Rewards")
         plt.xlabel("Step")
         plt.ylabel("Reward")
         plt.show()
         
-    def getWinRate(self) -> float:
-        if len(self._gameOutcomes) == 0:
+    def get_win_rate(self) -> float:
+        if len(self._game_outcomes) == 0:
             return 0.0
         
         else:
-            return np.count(np.array(self._gameOutcomes) == 1) / len(self._gameOutcomes)
+            return np.count(np.array(self._game_outcomes) == 1) / len(self._game_outcomes)
 
             
