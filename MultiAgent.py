@@ -4,6 +4,7 @@ import os
 from tensorflow import keras
 from tensorflow import function as tfFunction
 from tensorflow import Variable
+from tensorflow import print as tfPrint
 from tf_agents.trajectories import trajectory
 from tf_agents.policies.random_tf_policy import RandomTFPolicy
 from tf_agents.replay_buffers.tf_uniform_replay_buffer import TFUniformReplayBuffer
@@ -119,6 +120,11 @@ class MultiAgent(NamedObject):
             replay_buffer = self._replay_buffer,
             global_step = self._step
         )
+
+        ## Wrap these in tf functions to speed things up a bit
+        self._random_action = common.function(self.random_policy.action)
+        self._collect_action = common.function(self._agent.collect_policy.action)
+        self._inference_action = common.function(self._agent.policy.action)
         
     def save_checkpoint(self):
         ## TODO: make a subclass of the tfagent we want to use which has all internal variables defined as TF variables so the whole thing can be saved to a checkpoint maybe?
@@ -166,19 +172,19 @@ class MultiAgent(NamedObject):
         
         return
 
-    def set_current_step(self, timeStep: tuple):
+    def _set_current_step(self, timeStep: tuple):
         self.last_step = self.current_step
         self.current_step = timeStep
 
-    def get_action(self, timeStep: tuple, collect: bool = False, random: bool = False):
+    def _get_action(self, timeStep: tuple, collect: bool = False, random: bool = False):
         if random and collect:
             raise ValueError("have specified both collect and random policy, this is invalid")
         if random:
-            policy_step = self.random_policy.action(self.current_step)
+            policy_step = self._random_action(self.current_step)
         elif collect:
-            policy_step = self.collect_policy.action(self.current_step)
+            policy_step = self._collect_action(self.current_step)
         else:
-            policy_step = self._agent.policy.action(self.current_step)
+            policy_step = self._inference_action(self.current_step)
 
         self.last_policy_step = policy_step
 
@@ -188,7 +194,7 @@ class MultiAgent(NamedObject):
         
         return action
 
-    def add_frame(self):
+    def _add_frame(self):
         if((self.last_step != None) and (self.current_step != None) and (self.last_policy_step != None)):
             self.DEBUG("Adding Frame")
             self.DEBUG("  last time step:   ", self.last_step)
@@ -204,7 +210,8 @@ class MultiAgent(NamedObject):
 
             self._rewards.append(self.current_step.reward.numpy()[0])
 
-    def train_agent(self):
+    @tfFunction
+    def _train_agent(self):
         self.DEBUG("::: Training agent :::", self.name)
 
         # Sample a batch of data from the buffer and update the agent's network.
@@ -212,9 +219,24 @@ class MultiAgent(NamedObject):
         self.DEBUG("  using experience:", experience)
         train_loss = self._agent.train(experience).loss
         self.DEBUG("  Loss:", train_loss)
-        self.losses.append(train_loss)
 
         return train_loss
+    
+    def step_environment(self, env, save_frame: bool, train: bool, collect: bool = False, random: bool = False):
+        step = env.current_time_step()
+
+        self._set_current_step(step)
+
+        if save_frame:
+            self._add_frame()
+
+        action = self._get_action(step, collect=collect, random=random)
+
+        if train: 
+            self.losses.append(self._train_agent())
+
+        return env.step(action)
+            
 
     def plot_training_losses(self):
         plt.plot(list(range(len(self.losses))), self.losses)
