@@ -9,8 +9,31 @@ LOG_LEVEL = logLevels.kTrace
 GAME_LOG_LEVEL = logLevels.kInfo
 
 class Logger:
+    """
+    Used to log events, with a specified level of verbosity.
+    Can be used by multiple objects, and optionally log to a file.
+
+    Args:
+        logLevel (logLevels): 
+            Specifies the level that this logger will log at. Will only print messages whose minimum level is above this value.
+        name (str): 
+            The name of this logger, allows to more easily tell where the log message is coming from.
+        toFile (bool):
+            Whether to log messages to a file or to stdout.
+        fileName (std):
+            The name of the file to log to if toFile == True. Will default to "logs/<name>.log".
+    """
+    
     nLoggers = 0
-    def __init__(self, logLevel: logLevels = LOG_LEVEL, name: str = "", toFile: bool = False, fileName: str = ""):
+
+    def __init__(
+            self, 
+            logLevel: logLevels = LOG_LEVEL, 
+            name: str = "", 
+            toFile: bool = False, 
+            fileName: str = ""
+        ):
+        
         self.logLevel = logLevel
         if(name == ""):
             self.name = "Logger_" + str(Logger.nLoggers)

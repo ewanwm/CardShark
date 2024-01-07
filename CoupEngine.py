@@ -7,6 +7,7 @@ from tf_agents.environments import py_environment
 from tf_agents.trajectories import time_step as ts
 import itertools
 from abc import ABC, abstractmethod
+from named_object import NamedObject
 
 ## number of cards dealt to each player
 MAX_CARDS = 2
@@ -37,17 +38,19 @@ actionEnum   = Enum("actionEnum", actionString)
 DEBUG("actionString:", actionString)
 
 
-class Game(py_environment.PyEnvironment):
+class Game(py_environment.PyEnvironment, NamedObject):
     nGames = 0
-    def __init__(self, nPlayers: int, allowInvalid: bool = False, name: str ="", unravelActionSpace: bool = False, logToFile: bool = False, maxSteps: int = np.inf):
-        if name == "":
-            self.name = "Game_" + str(Game.nGames)
-        else:
-            self.name = name
-            
-        DEBUG("Initialising Game:", self.name, ", with", nPlayers, "players")
+    def __init__(
+            self, 
+            nPlayers: int, 
+            unravelActionSpace: bool = False, 
+            maxSteps: int = np.inf,
+            **kwargs
+        ):
 
-        self.logger = Logging.Logger(logLevel = Logging.GAME_LOG_LEVEL, name = self.name + "_Logger", toFile = logToFile)
+        NamedObject.__init__(self, **kwargs)
+        
+        DEBUG("Initialising Game:", self.name, ", with", nPlayers, "players")
 
         ## make the action space spec
         ## 1st variable is which action to take in the "action" phase of the game
@@ -204,33 +207,26 @@ class Game(py_environment.PyEnvironment):
                                         }
                          )
 
-    ## Wrappers for logger functions for the logger specific to this game
-    def ERROR(self, *messages): self.logger.error(*messages)
-    def WARN(self, *messages): self.logger.warn(*messages)
-    def INFO(self, *messages): self.logger.info(*messages)
-    def DEBUG(self, *messages): self.logger.debug(*messages)
-    def TRACE(self, *messages): self.logger.trace(*messages)
-
     ############################################################################################
     #### These are the functions that actually perform the actions specified by the players ####
     ############################################################################################
     def _Income(self, p):
         player = self.playerList[p]
-        self.INFO(" Player: ", player.Name, "Action: Income")
+        self.INFO(" Player: ", player.name, "Action: Income")
         player.giveCoins(1)
 
         player.giveReward(1)
 
     def _ForeignAid(self, p):
         player = self.playerList[p]
-        self.INFO(" Player: ", player.Name, "Action: ForeignAid")
+        self.INFO(" Player: ", player.name, "Action: ForeignAid")
         player.giveCoins(2)
         
         player.giveReward(2)
 
     def _Coup(self, p1, p2):
         player1, player2 = self.playerList[p1], self.playerList[p2]
-        self.INFO(" Player: ", player1.Name, "Action: Coup, Target: ", player2.Name)
+        self.INFO(" Player: ", player1.name, "Action: Coup, Target: ", player2.name)
         player1.takeCoins(actions["Coup"]["cost"])
         player2.loseInfluence()
         
@@ -238,13 +234,13 @@ class Game(py_environment.PyEnvironment):
 
     def _Tax(self, p):
         player = self.playerList[p]
-        self.INFO(" Player: ", player.Name, "Action: Tax")
+        self.INFO(" Player: ", player.name, "Action: Tax")
         player.giveCoins(3)
         player.giveReward(3)
 
     def _Steal(self, p1, p2):
         player1, player2 = self.playerList[p1], self.playerList[p2]
-        self.INFO(" Player: ", player1.Name, "Action: Steal, Target: ", player2.Name)
+        self.INFO(" Player: ", player1.name, "Action: Steal, Target: ", player2.name)
 
         ## do this to avoid trying to steal 2 coins when target player doesn't have enoug
         ## this should probably be masked out but I'm not sure how to do that easily as it requires masking a specific combination of actions, (steal and specific players)
@@ -259,7 +255,7 @@ class Game(py_environment.PyEnvironment):
 
     def _Assasinate(self, p1, p2):
         player1, player2 = self.playerList[p1], self.playerList[p2]
-        self.INFO(" Player: ", player1.Name, "Action: Assassinate, Target: ", player2.Name)
+        self.INFO(" Player: ", player1.name, "Action: Assassinate, Target: ", player2.name)
         player1.takeCoins(3)
         player2.loseInfluence()
 
@@ -332,7 +328,7 @@ class Game(py_environment.PyEnvironment):
     
     def getMask(self, playerIdx):
         ## get action space mask for player at index playerIdx in this games player list
-        self.DEBUG("Getting action mask for player", self.playerList[playerIdx].Name, "at index", playerIdx)
+        self.DEBUG("Getting action mask for player", self.playerList[playerIdx].name, "at index", playerIdx)
 
         ## make the action space spec
         ## 1st variable is which action to take in the "action" phase of the game
@@ -439,7 +435,7 @@ class Game(py_environment.PyEnvironment):
         return mask
     
     def getObservation(self, playerIdx):
-        self.DEBUG("Getting observation for player", self.playerList[playerIdx].Name, "at index", playerIdx)
+        self.DEBUG("Getting observation for player", self.playerList[playerIdx].name, "at index", playerIdx)
         ## get observarion for player at index playerIdx in this games player list
         observation = np.ndarray((self.nPlayers, 1 + MAX_CARDS), dtype=np.float32)
 
@@ -454,7 +450,7 @@ class Game(py_environment.PyEnvironment):
         ## for the rest of the observation we fill up the equivalent for other players
         for otherPlayerCounter in range(1, self.nPlayers):
             otherPlayerIdx = (playerIdx + otherPlayerCounter) % self.nPlayers
-            self.TRACE("adding info from player", self.playerList[otherPlayerIdx].Name, "at index", otherPlayerIdx)
+            self.TRACE("adding info from player", self.playerList[otherPlayerIdx].name, "at index", otherPlayerIdx)
             observation[otherPlayerCounter, 0] = self.playerList[otherPlayerIdx].Coins
 
             ## can only see other players cards if they are dead                
@@ -478,7 +474,7 @@ class Game(py_environment.PyEnvironment):
         ## take card from player, return to deck, shuffle then draw a new one
         player=self.playerList[p]
         player.takeCard(card)
-        self.INFO("Player", player.Name, "Swapping card", card)
+        self.INFO("Player", player.name, "Swapping card", card)
         self.Deck.returnCard(card)
         self.Deck.shuffle()
         newCard = self.Deck.draw()
@@ -487,21 +483,21 @@ class Game(py_environment.PyEnvironment):
 
     def challenge(self, p1, p2, *cards):
         player1, player2 = self.playerList[p1], self.playerList[p2]
-        self.DEBUG("Player", player1.Name, "challenging Player", player2.Name, "on having one of", *cards)
+        self.DEBUG("Player", player1.name, "challenging Player", player2.name, "on having one of", *cards)
 
         ## first shuffle order of the cards just to be extra fair
         cardList = [*cards]
         np.random.shuffle(cardList)
         for card in cardList:
             if player2.checkCard(card):
-                self.INFO("Challenge failed,", player2.Name, "had a", card)
+                self.INFO("Challenge failed,", player2.name, "had a", card)
                 ## according to rules, player needs to return the card and get a new one
                 self.swapCard(p2, card)
                 player1.loseInfluence()
                 return "failed"
 
         ## if made it to this point, player2 didnt have any of the specified cards
-        self.INFO("Challenge succeeded,", player2.Name, "did not have any of", *cards)
+        self.INFO("Challenge succeeded,", player2.name, "did not have any of", *cards)
         player2.loseInfluence()
 
         return "succeeded"
@@ -534,14 +530,14 @@ class Game(py_environment.PyEnvironment):
         ##### ACTION STATE #####
         if(self.gameState == "Action"):
             if not self.playerList[self.currentPlayer_action].isAlive:
-                self.INFO(self.playerList[self.currentPlayer_action].Name, "is dead! skipping their action")
+                self.INFO(self.playerList[self.currentPlayer_action].name, "is dead! skipping their action")
                 self._info["skippingTurn"] = True
                 self.currentPlayer_action = (self.currentPlayer_action + 1) % self.nPlayers
                 self.activePlayer = self.currentPlayer_action
 
             else:
                 self.attemptedAction = actionNames[action[0]]
-                self.INFO("Player", self.playerList[self.currentPlayer_action].Name, "is attempting action", self.attemptedAction)
+                self.INFO("Player", self.playerList[self.currentPlayer_action].name, "is attempting action", self.attemptedAction)
                 
                 blockable = False
                 targetted = False
@@ -549,7 +545,7 @@ class Game(py_environment.PyEnvironment):
                 ## first check if this action has a target
                 if actions[self.attemptedAction]["targeted"]:
                     self.action_target = (self.currentPlayer_action + 1 + action[1]) % self.nPlayers
-                    self.INFO("Targetting player", self.playerList[self.action_target].Name, "at index", self.action_target)
+                    self.INFO("Targetting player", self.playerList[self.action_target].name, "at index", self.action_target)
                     targetted = True
                 else:
                     self.DEBUG("Not a targetted action")
@@ -594,7 +590,7 @@ class Game(py_environment.PyEnvironment):
         ##### GENERAL BLOCKING STATE #####
         elif(self.gameState == "Blocking_general"): ## state in which any player can attempt to block the attempted action
             if not self.playerList[self.currentPlayer_block].isAlive:
-                self.INFO(self.playerList[self.currentPlayer_block].Name, "is dead so they can't really block anything")
+                self.INFO(self.playerList[self.currentPlayer_block].name, "is dead so they can't really block anything")
                 self._info["skippingTurn"] = True
                 self.currentPlayer_block = (self.currentPlayer_block + 1) % self.nPlayers
                 self.activePlayer = self.currentPlayer_block
@@ -610,23 +606,23 @@ class Game(py_environment.PyEnvironment):
                 
                 else:
                     if action[2] == 1: 
-                        self.INFO("player", self.playerList[self.currentPlayer_block].Name, "is attempting to block current action,", self.attemptedAction)
+                        self.INFO("player", self.playerList[self.currentPlayer_block].name, "is attempting to block current action,", self.attemptedAction)
                         self.changeState("Challenge_block")
                         self.activePlayer = self.currentPlayer_action
                     elif action[2] == 0:
                         ## we dont change state, just move to the next player and let them block if they want
-                        self.INFO("player", self.playerList[self.currentPlayer_block].Name, "did not try to block current action,", self.attemptedAction)
+                        self.INFO("player", self.playerList[self.currentPlayer_block].name, "did not try to block current action,", self.attemptedAction)
                         self.currentPlayer_block = (self.currentPlayer_block + 1) % self.nPlayers
                         self.activePlayer = self.currentPlayer_block
                 
         ##### TARGETTED BLOCKING STATE #####
         elif(self.gameState == "Blocking_target"): ## target of an action can attempt to block it 
             if action[2] == 1: 
-                self.INFO("player", self.playerList[self.currentPlayer_block].Name, "is attempting to block current action,", self.attemptedAction)
+                self.INFO("player", self.playerList[self.currentPlayer_block].name, "is attempting to block current action,", self.attemptedAction)
                 self.changeState("Challenge_block")
                 self.activePlayer = self.currentPlayer_action
             else:
-                self.INFO("action was not challenged by",self.playerList[self.currentPlayer_block].Name)
+                self.INFO("action was not challenged by",self.playerList[self.currentPlayer_block].name)
                 self.performAttemptedAction()
                 self.currentPlayer_action = (self.currentPlayer_action + 1) % self.nPlayers
                 self.changeState("Action")
@@ -635,7 +631,7 @@ class Game(py_environment.PyEnvironment):
         ##### GENERAL CHALLENGE STATE #####
         elif(self.gameState == "Challenge_general"): ## any player can challenge the attempted action
             if not self.playerList[self.currentPlayer_challenge].isAlive:
-                self.INFO(self.playerList[self.currentPlayer_challenge].Name, "is dead so they can't really challenge anything")
+                self.INFO(self.playerList[self.currentPlayer_challenge].name, "is dead so they can't really challenge anything")
                 self._info["skippingTurn"] = True
                 self.currentPlayer_challenge = (self.currentPlayer_challenge + 1) % self.nPlayers
                 self.activePlayer = self.currentPlayer_challenge
@@ -651,7 +647,7 @@ class Game(py_environment.PyEnvironment):
 
                 else:
                     if action[3] == 1: 
-                        self.INFO("player", self.playerList[self.currentPlayer_challenge].Name, "is challenging", self.playerList[self.currentPlayer_action].Name, "on their action,", self.attemptedAction)
+                        self.INFO("player", self.playerList[self.currentPlayer_challenge].name, "is challenging", self.playerList[self.currentPlayer_action].name, "on their action,", self.attemptedAction)
                         if self.challenge(self.currentPlayer_challenge, self.currentPlayer_action, actions[self.attemptedAction]["needs"]) == "failed":
                             self.performAttemptedAction()
                         
@@ -661,7 +657,7 @@ class Game(py_environment.PyEnvironment):
                         self.activePlayer = self.currentPlayer_action
 
                     elif action[3] == 0:
-                            self.INFO("player", self.playerList[self.currentPlayer_challenge].Name, "did not attempt to challenge")
+                            self.INFO("player", self.playerList[self.currentPlayer_challenge].name, "did not attempt to challenge")
                             ## we dont change state, just move to the next player and let them block if they want
                             self.currentPlayer_challenge = (self.currentPlayer_challenge + 1) % self.nPlayers
                             self.activePlayer = self.currentPlayer_challenge
@@ -670,11 +666,11 @@ class Game(py_environment.PyEnvironment):
         ##### TARGETTED CHALLENGE STATE #####
         elif(self.gameState == "Challenge_target"): ## target of an action can challenge it 
             if action[3] == 1: 
-                self.INFO("player", self.playerList[self.currentPlayer_challenge].Name, "is attempting to challenge current action,", self.attemptedAction)
+                self.INFO("player", self.playerList[self.currentPlayer_challenge].name, "is attempting to challenge current action,", self.attemptedAction)
                 if self.challenge(self.currentPlayer_challenge, self.currentPlayer_action, actions[self.attemptedAction]["needs"]) == "failed":
                     self.performAttemptedAction()
             else:
-                self.INFO("action was not challenged by",self.playerList[self.currentPlayer_challenge].Name)
+                self.INFO("action was not challenged by",self.playerList[self.currentPlayer_challenge].name)
                 self.performAttemptedAction()
                 
             self.currentPlayer_action = (self.currentPlayer_action + 1) % self.nPlayers
@@ -684,10 +680,10 @@ class Game(py_environment.PyEnvironment):
         ##### CHALLENGE BLOCKING STATE #####
         elif(self.gameState == "Challenge_block"): ## initial action taking player can challenge an attempt to block their action
             if action[4] == 1: 
-                self.INFO("player", self.playerList[self.currentPlayer_action].Name, "is challenging the attempt by",self.playerList[self.currentPlayer_block].Name, "to block their action,", self.attemptedAction)
+                self.INFO("player", self.playerList[self.currentPlayer_action].name, "is challenging the attempt by",self.playerList[self.currentPlayer_block].name, "to block their action,", self.attemptedAction)
                 self.challenge(self.currentPlayer_action, self.currentPlayer_block, *actions[self.attemptedAction]["blockedBy"])
             else:
-                self.INFO("player", self.playerList[self.currentPlayer_action].Name, "accepts attempt by",self.playerList[self.currentPlayer_block].Name, "to block their action,", self.attemptedAction)
+                self.INFO("player", self.playerList[self.currentPlayer_action].name, "accepts attempt by",self.playerList[self.currentPlayer_block].name, "to block their action,", self.attemptedAction)
                 self.playerList[self.currentPlayer_action].giveReward(-3)
                 self.playerList[self.currentPlayer_block].giveReward(3)
 

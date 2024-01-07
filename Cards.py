@@ -25,7 +25,7 @@ DEBUG("cardString:", cardString)
 
 class Deck:
     def __init__(self):
-        self.Name = "Deck"
+        self.name = "Deck"
         self.reset()
 
     def reset(self):
@@ -53,7 +53,7 @@ class Deck:
 
     def __str__(self):
         retStr = ""
-        retStr += "Name: " + self.Name + ", "
+        retStr += "Name: " + self.name + ", "
         retStr += "N Cards: " + str(len(self.Cards)) + ", "
 
         retStr += "{"

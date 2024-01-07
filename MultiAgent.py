@@ -16,7 +16,9 @@ from tf_agents.typing import types
 import matplotlib.pyplot as plt
 from tf_agents.utils import common
 
-class MultiAgent():
+from named_object import NamedObject
+
+class MultiAgent(NamedObject):
     nAgents = 0
 
     def __init__(self,
@@ -25,37 +27,20 @@ class MultiAgent():
             action_spec: types.NestedTensorSpec,
             ## optional args for MultiAgent
             observation_spec = None,
-            logger: Logger = None,
-            agent_name: str = "",
             train_batch_size: int = 4,
             max_buffer_length: int = 1000,
             apply_mask: bool = True,
             fc_layer_params: tuple = (100,),
             checkpoint_path: str = None,
             ## optional DqnAgent args
-            **DqnAgent_args
+            DqnAgent_args = {},
+            **kwargs
         ):
-        
-        
-        ## set optional properties
-        if agent_name == "":
-            self.Name = "Agent_" + str(MultiAgent.nAgents)
-        else: 
-            self.Name = agent_name
 
-        if observation_spec == None:
-            self._observation_spec = self._time_step_spec.observation
-        else:
-            self._observation_spec = observation_spec  
+        super().__init__(**kwargs)
 
-        if checkpoint_path == None:
-            checkpoint_path = os.path.join("Checkpoints", self.Name)
-
-        self._checkpoint_path = checkpoint_path
-        
 
         ## Set specified properties
-        self.logger = logger
         self._apply_mask = apply_mask
         self.train_bs = train_batch_size
     
@@ -64,6 +49,17 @@ class MultiAgent():
 
         self._action_spec = action_spec
         self.DEBUG("ACTION SPEC:", self._action_spec)
+
+        ## Set optional values
+        if observation_spec == None:
+            self._observation_spec = self._time_step_spec.observation
+        else:
+            self._observation_spec = observation_spec  
+
+        if checkpoint_path == None:
+            checkpoint_path = os.path.join("Checkpoints", self.name)
+
+        self._checkpoint_path = checkpoint_path
 
 
         ## Set inital values
@@ -147,18 +143,6 @@ class MultiAgent():
     
     def register_inconclusive(self):
         self._register_outcome(0)
-    
-    ## wrap the logger functions... must be a nicer way of doing this...
-    def ERROR(self, *messages): 
-        if self.logger != None: self.logger.error("{"+self.Name+"}", *messages)
-    def WARN(self, *messages): 
-        if self.logger != None: self.logger.warn("{"+self.Name+"}", *messages)
-    def INFO(self, *messages): 
-        if self.logger != None: self.logger.info("{"+self.Name+"}", *messages)
-    def DEBUG(self, *messages): 
-        if self.logger != None: self.logger.debug("{"+self.Name+"}", *messages)
-    def TRACE(self, *messages): 
-        if self.logger != None: self.logger.trace("{"+self.Name+"}", *messages)
 
     ## Function to extract the observations and mask values to pass to the model
     def obs_constraint_splitter(self):
@@ -224,7 +208,7 @@ class MultiAgent():
             self._rewards.append(self.current_step.reward.numpy()[0])
 
     def train_agent(self):
-        self.DEBUG("::: Training agent :::", self.Name)
+        self.DEBUG("::: Training agent :::", self.name)
 
         # Sample a batch of data from the buffer and update the agent's network.
         experience, unused_info = next(self.experience_iterator)
@@ -237,14 +221,14 @@ class MultiAgent():
 
     def plot_training_losses(self):
         plt.plot(list(range(len(self.losses))), self.losses)
-        plt.title(self.Name + " Losses")
+        plt.title(self.name + " Losses")
         plt.xlabel("Epoch")
         plt.ylabel("Loss")
         plt.show()
 
     def plot_rewards(self):
         plt.plot(list(range(len(self._rewards))), self._rewards)
-        plt.title(self.Name + " Rewards")
+        plt.title(self.name + " Rewards")
         plt.xlabel("Step")
         plt.ylabel("Reward")
         plt.show()
