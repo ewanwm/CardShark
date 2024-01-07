@@ -39,7 +39,6 @@ DEBUG("actionString:", actionString)
 
 
 class Game(py_environment.PyEnvironment, NamedObject):
-    nGames = 0
     def __init__(
             self, 
             nPlayers: int, 
@@ -103,8 +102,6 @@ class Game(py_environment.PyEnvironment, NamedObject):
         ## initialise the deck
         self.TRACE("  Creating deck")
         self.Deck = Deck()
-
-        Game.nGames += 1
 
         self._maxSteps = maxSteps
         self._reset()

@@ -19,7 +19,6 @@ from tf_agents.utils import common
 from named_object import NamedObject
 
 class MultiAgent(NamedObject):
-    nAgents = 0
 
     def __init__(self,
             ## positional args to pass through to the DqnAgent
@@ -120,8 +119,6 @@ class MultiAgent(NamedObject):
             replay_buffer = self._replay_buffer,
             global_step = self._step
         )
-
-        MultiAgent.nAgents += 1
         
     def save_checkpoint(self):
         ## TODO: make a subclass of the tfagent we want to use which has all internal variables defined as TF variables so the whole thing can be saved to a checkpoint maybe?
