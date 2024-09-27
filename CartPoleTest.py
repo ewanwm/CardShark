@@ -20,12 +20,8 @@ import Logging
 end = timer()
 print('Elapsed time: ' + str(end - start))
 
-import PIL
 from collections import namedtuple
-import base64
 import imageio
-import IPython
-import os
 print("Imported other modules")
 
 ## Set up the CartPole environment from Gym
@@ -49,7 +45,7 @@ def runEpisodeSingleAgent(train: bool, # <- Whether to train the agent during th
     
     """ fn to run a single episode of the provided environment, either to collect data, train, or evaluate"""
     
-    episodePerformance = namedtuple("episodePerformance", "stepCount episodeReward losses nFrames")
+    episodePerformance = namedtuple("episodePerformance", "stepCount episodeReward min_loss max_loss nFrames")
     nFrames = 0
     reward = 0.0
     losses = []
@@ -58,8 +54,8 @@ def runEpisodeSingleAgent(train: bool, # <- Whether to train the agent during th
        video = imageio.get_writer(videoFileName, fps=videoFPS)
 
     step = env.reset()
-    agent.setCurrentStep(step)
-    action = agent.getAction(step, collect=collect, random=random)
+    agent._set_current_step(step)
+    action = agent._get_action(step, collect=collect, random=random)
 
     if toVideo:
         ## might need to account for the batch dimension
@@ -71,18 +67,17 @@ def runEpisodeSingleAgent(train: bool, # <- Whether to train the agent during th
     ## loop until the episode is finished (the env returns a LAST type step)
     while(step.step_type != ts.StepType.LAST):
 
+        #step = agent.step_environment(env, save_frame = True, train = train, collect = collect, random = random)
+
         step = env.step(action)
 
-        agent.setCurrentStep(step)
-        agent.addFrame()
+        agent._set_current_step(step)
+        agent._add_frame()
 
-        action = agent.getAction(step, collect=collect, random=random)
+        action = agent._get_action(step, collect=collect, random=random)
         
-
-        #step = agent.step_addFrame(env, collect, random)
-
         if train: 
-            losses.append(agent.trainAgent().numpy())
+            losses.append(agent.train_agent().numpy())
 
         if toVideo:
             ## might need to account for the batch dimension
@@ -96,20 +91,28 @@ def runEpisodeSingleAgent(train: bool, # <- Whether to train the agent during th
 
     if toVideo: video.close()
 
-    return episodePerformance(agent.train_step_counter.numpy(), reward, losses, nFrames)
+    if len(losses) == 0:
+        min_loss = None
+        max_loss = None
+    else:
+        min_loss = min(losses)
+        max_loss = max(losses)
 
-def testMultiAgent():
-    
+    return episodePerformance(agent._step.numpy(), reward, min_loss, max_loss, nFrames)
+
+def testMultiAgent(init_collect_episodes = 20, train_episodes = 200, log_interval = 10):
+    print("TS Spec:", train_env.time_step_spec())
     ## Set up the agent
     agent = MultiAgent.MultiAgent(
             train_env.time_step_spec(), 
             train_env.action_spec(), 
-            optimizer = keras.optimizers.Adam(learning_rate=1e-3),
-            logger=Logging.Logger(name = "CartPoleTest_Logger", logLevel = Logging.logLevels.kInfo, toFile = True),
-            batchSize_train=64,
-            epsilon_greedy=0.4,
-            applyMask = False,
-            td_errors_loss_fn=common.element_wise_squared_loss
+            train_batch_size = 64,
+            observation_spec = train_env.time_step_spec().observation,
+            apply_mask = False,
+            DqnAgent_args={
+                "optimizer": keras.optimizers.Adam(learning_rate=1e-3),
+                "td_errors_loss_fn": common.element_wise_squared_loss},
+            #logger=Logging.Logger(name = "CartPoleTest_Logger", logLevel = Logging.logLevels.kDebug, toFile = True),
         )
     
     ## Make a video of the agents performance pre-training
@@ -118,16 +121,25 @@ def testMultiAgent():
 
     ## now train the agent
     ## first collect some data without training
-    for _ in range(20):
-        print("  Collection perf:", runEpisodeSingleAgent(False, agent, train_env, collect = False, random = True))
+    print(":::: Collecting some random initial training data ::::")
+    for ep in range(1, init_collect_episodes + 1):
+        perf = runEpisodeSingleAgent(False, agent, train_env, collect = False, random = True)
+        if ep % log_interval == 0:
+            print("  Collection episode {} performance:".format(ep), perf)
 
-    print("NFrames collected:", agent._replay_buffer.num_frames())
+    print()
+
+    print(":::: Training the agent ::::")
     ## now actually train
-    for _ in range(200):
-        print("  Train perf:", runEpisodeSingleAgent(True, agent, train_env))
+    for ep in range(1, train_episodes + 1):
+        perf = runEpisodeSingleAgent(True, agent, train_env, collect=True)
+        if ep % log_interval == 0:
+            print("  Train episode {} performance:".format(ep), perf)
 
-    agent.plotTrainingLosses()
-    agent.plotRewards()
+    print()
+
+    agent.plot_training_losses()
+    agent.plot_rewards()
 
     ## Now make a video of the agents performance post-training
     perf = runEpisodeSingleAgent(False, agent, eval_env, collect=False, toVideo=True, videoFileName="PostTrainingCartPole.mp4")
