@@ -4,6 +4,7 @@ import os
 from tensorflow import keras
 from tensorflow import function as tfFunction
 from tensorflow import Variable
+from tensorflow import print as tfPrint
 from tf_agents.trajectories import trajectory
 from tf_agents.policies.random_tf_policy import RandomTFPolicy
 from tf_agents.replay_buffers.tf_uniform_replay_buffer import TFUniformReplayBuffer
@@ -30,6 +31,7 @@ class MultiAgent(NamedObject):
             max_buffer_length: int = 1000,
             apply_mask: bool = True,
             fc_layer_params: tuple = (100,),
+            checkpoint = False,
             checkpoint_path: str = None,
             ## optional DqnAgent args
             DqnAgent_args = {},
@@ -111,14 +113,33 @@ class MultiAgent(NamedObject):
         self.experience_iterator = iter(self.experience_dataset)
         
         ## make the checkpointer
-        self._trainCheckpointer = common.Checkpointer(
-            ckpt_dir = self._checkpoint_path,
-            max_to_keep = 1,
-            agent = self._agent,
-            policy = self._agent.policy,
-            replay_buffer = self._replay_buffer,
-            global_step = self._step
-        )
+        if checkpoint:
+            self._trainCheckpointer = common.Checkpointer(
+                ckpt_dir = self._checkpoint_path,
+                max_to_keep = 1,
+                agent = self._agent,
+                policy = self._agent.policy,
+                replay_buffer = self._replay_buffer,
+                global_step = self._step
+            )
+
+        ## Wrap these in tf functions to speed things up a bit
+        self._agent.train = common.function(self._agent.train)
+
+    
+    @tfFunction
+    def _action_from_policy(self, policy, time_step):
+        return policy.action(time_step)
+    
+    ## specific functions for getting different actions from policies, each one is just a wrapper for the above tf function 
+    def _random_action(self, time_step):
+        return self._action_from_policy(self.random_policy, time_step)
+    
+    def _collect_action(self, time_step):
+        return self._action_from_policy(self._agent.collect_policy, time_step)
+    
+    def _inference_action(self, time_step):
+        return self._action_from_policy(self._agent.policy, time_step)
         
     def save_checkpoint(self):
         ## TODO: make a subclass of the tfagent we want to use which has all internal variables defined as TF variables so the whole thing can be saved to a checkpoint maybe?
@@ -166,19 +187,19 @@ class MultiAgent(NamedObject):
         
         return
 
-    def set_current_step(self, timeStep: tuple):
+    def _set_current_step(self, timeStep: tuple):
         self.last_step = self.current_step
         self.current_step = timeStep
 
-    def get_action(self, timeStep: tuple, collect: bool = False, random: bool = False):
+    def _get_action(self, timeStep: tuple, collect: bool = False, random: bool = False):
         if random and collect:
             raise ValueError("have specified both collect and random policy, this is invalid")
         if random:
-            policy_step = self.random_policy.action(self.current_step)
+            policy_step = self._random_action(self.current_step)
         elif collect:
-            policy_step = self.collect_policy.action(self.current_step)
+            policy_step = self._collect_action(self.current_step)
         else:
-            policy_step = self._agent.policy.action(self.current_step)
+            policy_step = self._inference_action(self.current_step)
 
         self.last_policy_step = policy_step
 
@@ -188,7 +209,7 @@ class MultiAgent(NamedObject):
         
         return action
 
-    def add_frame(self):
+    def _add_frame(self):
         if((self.last_step != None) and (self.current_step != None) and (self.last_policy_step != None)):
             self.DEBUG("Adding Frame")
             self.DEBUG("  last time step:   ", self.last_step)
@@ -204,17 +225,59 @@ class MultiAgent(NamedObject):
 
             self._rewards.append(self.current_step.reward.numpy()[0])
 
-    def train_agent(self):
+    @tfFunction
+    def _train_agent(self):
         self.DEBUG("::: Training agent :::", self.name)
 
         # Sample a batch of data from the buffer and update the agent's network.
-        experience, unused_info = next(self.experience_iterator)
+        experience, unused = next(self.experience_iterator)
         self.DEBUG("  using experience:", experience)
         train_loss = self._agent.train(experience).loss
         self.DEBUG("  Loss:", train_loss)
-        self.losses.append(train_loss)
 
         return train_loss
+    
+    def train_agent(self):
+        loss = self._train_agent()
+        self.losses.append(loss)
+
+        return loss
+    
+    def step_environment(self, env, save_frame: bool, train: bool, collect: bool = False, random: bool = False):
+        raise NotImplementedError("""This method currently seems to be broken and I'm not yet sure why \n
+                                  Should instead use paradigm:
+
+                                    step = env.reset()
+                                    agent._set_current_step(step)
+                                    action = agent._get_action(step, ...)
+                                    ...
+                                    for _ in range(n_steps):
+                                
+                                        step = env.step(action)
+                                        agent._set_current_step(step)
+                                        agent._add_frame()
+                                        action = agent._get_action(step, collect=collect, random=random)
+                                        agent._train_agent()
+                                    ...
+                                  
+                                    for the time being
+                                  """)
+    
+        step = env.current_time_step()
+
+        self._set_current_step(step)
+
+        if save_frame:
+            self._add_frame()
+
+        action = self._get_action(step, collect=collect, random=random)
+
+        if train: 
+            train_loss = self._train_agent()
+            self.losses.append(train_loss)
+
+        return env.step(action)
+            
 
     def plot_training_losses(self):
         plt.plot(list(range(len(self.losses))), self.losses)
