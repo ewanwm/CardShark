@@ -31,6 +31,7 @@ class MultiAgent(NamedObject):
             max_buffer_length: int = 1000,
             apply_mask: bool = True,
             fc_layer_params: tuple = (100,),
+            checkpoint = False,
             checkpoint_path: str = None,
             ## optional DqnAgent args
             DqnAgent_args = {},
@@ -112,19 +113,33 @@ class MultiAgent(NamedObject):
         self.experience_iterator = iter(self.experience_dataset)
         
         ## make the checkpointer
-        self._trainCheckpointer = common.Checkpointer(
-            ckpt_dir = self._checkpoint_path,
-            max_to_keep = 1,
-            agent = self._agent,
-            policy = self._agent.policy,
-            replay_buffer = self._replay_buffer,
-            global_step = self._step
-        )
+        if checkpoint:
+            self._trainCheckpointer = common.Checkpointer(
+                ckpt_dir = self._checkpoint_path,
+                max_to_keep = 1,
+                agent = self._agent,
+                policy = self._agent.policy,
+                replay_buffer = self._replay_buffer,
+                global_step = self._step
+            )
 
         ## Wrap these in tf functions to speed things up a bit
-        self._random_action = common.function(self.random_policy.action)
-        self._collect_action = common.function(self._agent.collect_policy.action)
-        self._inference_action = common.function(self._agent.policy.action)
+        self._agent.train = common.function(self._agent.train)
+
+    
+    @tfFunction
+    def _action_from_policy(self, policy, time_step):
+        return policy.action(time_step)
+    
+    ## specific functions for getting different actions from policies, each one is just a wrapper for the above tf function 
+    def _random_action(self, time_step):
+        return self._action_from_policy(self.random_policy, time_step)
+    
+    def _collect_action(self, time_step):
+        return self._action_from_policy(self._agent.collect_policy, time_step)
+    
+    def _inference_action(self, time_step):
+        return self._action_from_policy(self._agent.policy, time_step)
         
     def save_checkpoint(self):
         ## TODO: make a subclass of the tfagent we want to use which has all internal variables defined as TF variables so the whole thing can be saved to a checkpoint maybe?
@@ -215,14 +230,39 @@ class MultiAgent(NamedObject):
         self.DEBUG("::: Training agent :::", self.name)
 
         # Sample a batch of data from the buffer and update the agent's network.
-        experience, unused_info = next(self.experience_iterator)
+        experience, unused = next(self.experience_iterator)
         self.DEBUG("  using experience:", experience)
         train_loss = self._agent.train(experience).loss
         self.DEBUG("  Loss:", train_loss)
 
         return train_loss
     
+    def train_agent(self):
+        loss = self._train_agent()
+        self.losses.append(loss)
+
+        return loss
+    
     def step_environment(self, env, save_frame: bool, train: bool, collect: bool = False, random: bool = False):
+        raise NotImplementedError("""This method currently seems to be broken and I'm not yet sure why \n
+                                  Should instead use paradigm:
+
+                                    step = env.reset()
+                                    agent._set_current_step(step)
+                                    action = agent._get_action(step, ...)
+                                    ...
+                                    for _ in range(n_steps):
+                                
+                                        step = env.step(action)
+                                        agent._set_current_step(step)
+                                        agent._add_frame()
+                                        action = agent._get_action(step, collect=collect, random=random)
+                                        agent._train_agent()
+                                    ...
+                                  
+                                    for the time being
+                                  """)
+    
         step = env.current_time_step()
 
         self._set_current_step(step)
@@ -233,7 +273,8 @@ class MultiAgent(NamedObject):
         action = self._get_action(step, collect=collect, random=random)
 
         if train: 
-            self.losses.append(self._train_agent())
+            train_loss = self._train_agent()
+            self.losses.append(train_loss)
 
         return env.step(action)
             
