@@ -1,13 +1,19 @@
+# other Coup AI stuff
 import Logging
-import numpy as np
 from Cards import *
 from Player import *
+from named_object import NamedObject
+
+# TF agents stuff
 from tf_agents.specs import BoundedArraySpec
 from tf_agents.environments import py_environment
 from tf_agents.trajectories import time_step as ts
+
+# Python stuff
 import itertools
+import typing
+import numpy as np
 from abc import ABC, abstractmethod
-from named_object import NamedObject
 
 ## number of cards dealt to each player
 MAX_CARDS = 2
@@ -89,6 +95,7 @@ class Game(py_environment.PyEnvironment, NamedObject):
                                   "mask": BoundedArraySpec(minimum = 0, maximum = 1, shape=(self._action_spec.maximum - self._action_spec.minimum +1, ), dtype=np.int32, name = "mask"),
                                   "activePlayer": BoundedArraySpec(minimum = 0, maximum = nPlayers, shape=(), dtype=np.int32, name = "activePlayer"),
                                 }
+                                
         ## TODO: Add an observation for which player is targetting this player with an action
         ## TODO: Add an observation for which action is currently being attempted and by who
 
@@ -107,7 +114,11 @@ class Game(py_environment.PyEnvironment, NamedObject):
         self._reset()
 
     ## for returning general info about the environment, not things necessarily needed by agents as observations
-    def get_info(self):
+    def get_info(self) -> typing.Dict:
+        """Get information about the state of the game
+
+        This info 
+        """
 
         return self._info
         
@@ -138,13 +149,35 @@ class Game(py_environment.PyEnvironment, NamedObject):
                       challenge_block = challengeBlockStr
                       )
     
-    def observation_spec(self):
+    def observation_spec(self) -> typing.Dict[str, BoundedArraySpec]:
+        """Get the observation specification for the environment associated with this Game object
+
+        This is a dictionary with entries:
+            - "observations": the ArraySpec describing the observations returned by the environment.
+            - "mask":         the ArraySpec describing the mask returned by the environment.
+            - "activePlayer": ArraySpec describing the part of the observation that tells which player is active
+        """
         return self._observation_spec
     
-    def action_spec(self):
+    def action_spec(self) -> BoundedArraySpec:
+        """Get the action specification for the environment associated with this Game object
+        """
         return self._action_spec
 
     def _unravel_action_space(self):
+        """Unravel the action space of the environment 
+
+        e.g. if the current action spec is an N by M multidimensional array of actions,
+        this fn will transform the space into a one dimensional one of size M x N.
+        The structure of the initial higher dimensional space will be stored in the 
+        _unravelledActionSpace attribute. To get from the 1D action space back to the 
+        original space you can do::
+
+            action = self._unravelledActionSpace[1DactionID]
+
+        
+        """
+
         self.DEBUG("Generating unravelled action space")
         toProduct = []
         for min, max in zip(self._action_spec.minimum, self._action_spec.maximum):
@@ -275,7 +308,9 @@ class Game(py_environment.PyEnvironment, NamedObject):
             fn(self.currentPlayer_action)
     
 
-    def getActivePlayer(self):
+    def getActivePlayer(self) -> int:
+        """Get the ID of the currently active player
+        """
         return int(self.activePlayer)
     
     def checkStatus(self):
@@ -499,7 +534,10 @@ class Game(py_environment.PyEnvironment, NamedObject):
 
         return "succeeded"
 
-    def _step(self, action):
+    def _step(self, action: np.ndarray) -> None:
+        """Step the game forward one iteration
+
+        """
         self.INFO("")
         self.INFO("##### Stepping :: Step {} #####".format(self._stepCount))
         self.INFO("gameState:", self.gameState)

@@ -1,25 +1,34 @@
+# other coup AI stuff
 from Logging import *
+from named_object import NamedObject
+
+# python stuff
 import numpy as np
 import os
+import matplotlib.pyplot as plt
+
+# TF stuff
 from tensorflow import keras
 from tensorflow import function as tfFunction
 from tensorflow import Variable
-from tensorflow import print as tfPrint
+
+# TF agents stuff
 from tf_agents.trajectories import trajectory
 from tf_agents.policies.random_tf_policy import RandomTFPolicy
 from tf_agents.replay_buffers.tf_uniform_replay_buffer import TFUniformReplayBuffer
 from tf_agents.agents.dqn.dqn_agent import DqnAgent
 from tf_agents.networks import categorical_q_network
 from tf_agents.agents.categorical_dqn import categorical_dqn_agent
-from tf_agents.networks import sequential
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
-import matplotlib.pyplot as plt
 from tf_agents.utils import common
 
-from named_object import NamedObject
 
 class MultiAgent(NamedObject):
+    """General agent class which keeps track of training data and outcomes of played games
+
+
+    """
 
     def __init__(self,
             ## positional args to pass through to the DqnAgent
@@ -39,7 +48,6 @@ class MultiAgent(NamedObject):
         ):
 
         super().__init__(**kwargs)
-
 
         ## Set specified properties
         self._apply_mask = apply_mask
@@ -69,7 +77,7 @@ class MultiAgent(NamedObject):
         self._rewards = []
         self._step = Variable(0)
 
-        self.random_policy = RandomTFPolicy(self._time_step_spec, self._action_spec, observation_and_action_constraint_splitter = self.obs_constraint_splitter())
+        self.random_policy = RandomTFPolicy(self._time_step_spec, self._action_spec, observation_and_action_constraint_splitter = self._obs_constraint_splitter())
         self.current_step = None
         self.last_step = None
         self.last_policy_step = None
@@ -84,7 +92,7 @@ class MultiAgent(NamedObject):
             min_q_value=-20,
             max_q_value=20,
             n_step_update=2,
-            observation_and_action_constraint_splitter=self.obs_constraint_splitter(),
+            observation_and_action_constraint_splitter=self._obs_constraint_splitter(),
             gamma=0.99,
             train_step_counter=self._step,
             **DqnAgent_args
@@ -163,7 +171,13 @@ class MultiAgent(NamedObject):
         self._register_outcome(0)
 
     ## Function to extract the observations and mask values to pass to the model
-    def obs_constraint_splitter(self):
+    def _obs_constraint_splitter(self):
+        """Utility fn to construct the "observation constraint splitter to pass to the q agent
+
+        This is used to split the observation before passing to the network.
+        This is needed if the environment provides a mask.
+        """
+        
         if self._apply_mask:
             #@tfFunction
             def retFn(observationDict):
