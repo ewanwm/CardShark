@@ -1,6 +1,6 @@
 # cardshark engine stuff
 from cardshark import engine
-from cardshark import cards
+from cardshark.cards import Deck
 from cardshark.player import Player
 from cardshark.logging import *
 
@@ -10,6 +10,7 @@ import numpy as np
 
 # coup specific stuff
 from examples.coup import coup_player
+from examples.coup import coup_cards
 
 # TF stuff
 #TODO: abstract all tf_agents out into Game base class. User shouldn't have to touch it
@@ -86,7 +87,7 @@ class CoupGame(engine.Game):
         observationSpecMin_NP = np.ndarray((self.nPlayers, 1 + MAX_CARDS), dtype=np.float32)
         observationSpecMin_NP[:] = 0.0
         observationSpecMax_NP[:, 0] = 12 # <- 12 is the max number of coins a player can have
-        observationSpecMax_NP[:, 1:] = len(cards.cards.keys()) +1 # <- one index for each possible card + one for face down card 
+        observationSpecMax_NP[:, 1:] = len(coup_cards.cards.keys()) +1 # <- one index for each possible card + one for face down card 
         
         self.DEBUG("observationSpecMin_NP: ", observationSpecMin_NP)
         self.DEBUG("observationSpecMax_NP: ", observationSpecMax_NP)
@@ -107,7 +108,7 @@ class CoupGame(engine.Game):
 
         ## initialise the deck
         self.TRACE("  Creating deck")
-        self.Deck = cards.Deck()
+        self.Deck = Deck(coup_cards.cards)
 
         self._maxSteps = maxSteps
         self._reset()
@@ -404,7 +405,7 @@ class CoupGame(engine.Game):
         observation[0,0] = self.playerList[playerIdx].Coins
         ## can always see own cards
         for i in range(MAX_CARDS):
-            observation[0, 1 + i] = cards.cardEnum[self.playerList[playerIdx].Cards[i]].value
+            observation[0, 1 + i] = coup_cards.cardEnum[self.playerList[playerIdx].Cards[i]].value
 
         ## for the rest of the observation we fill up the equivalent for other players
         for otherPlayerCounter in range(1, self.nPlayers):
@@ -415,7 +416,7 @@ class CoupGame(engine.Game):
             ## can only see other players cards if they are dead                
             for i in range(MAX_CARDS):
                 if self.playerList[otherPlayerIdx].CardStates[i] == "Dead":
-                    observation[otherPlayerCounter, 1 + i] = cards.cardEnum[self.playerList[otherPlayerIdx].Cards[i]].value     
+                    observation[otherPlayerCounter, 1 + i] = coup_cards.cardEnum[self.playerList[otherPlayerIdx].Cards[i]].value     
                 else:   
                     observation[otherPlayerCounter, 1 + i] = 0.0
 
@@ -427,7 +428,7 @@ class CoupGame(engine.Game):
         player=self.playerList[p]
         player.takeCard(card)
         self.INFO("Player", player.name, "Swapping card", card)
-        self.Deck.returnCard(card)
+        self.Deck.add_card(card)
         self.Deck.shuffle()
         newCard = self.Deck.draw()
         player.giveCard(newCard)

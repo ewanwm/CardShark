@@ -1,4 +1,4 @@
-# other Coup AI stuff
+# other cardshark stuff
 from cardshark import cards
 from cardshark.logging import *
 from cardshark.player import Player
@@ -191,7 +191,6 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
         return step
 
 
-""" GameState class: Base state class for coup game engine. """
 class GameState(ABC):
     """Abstract base class representing a game state
 
