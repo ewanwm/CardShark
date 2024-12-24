@@ -1,11 +1,13 @@
 # other coup AI stuff
-from Logging import *
-from named_object import NamedObject
+import cardshark
+from cardshark.logging import *
+from cardshark.named_object import NamedObject
 
 # python stuff
 import numpy as np
 import os
 import matplotlib.pyplot as plt
+from enum import Enum
 
 # TF stuff
 from tensorflow import keras

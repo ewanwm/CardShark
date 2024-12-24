@@ -15,8 +15,8 @@ print('Elapsed time: ' + str(end - start))
 
 print('\nimport Coup AI modules')
 start = timer()
-import MultiAgent
-import Logging 
+from cardshark.multi_agent import MultiAgent
+from cardshark import logging 
 end = timer()
 print('Elapsed time: ' + str(end - start))
 
@@ -103,7 +103,7 @@ def runEpisodeSingleAgent(train: bool, # <- Whether to train the agent during th
 def testMultiAgent(init_collect_episodes = 20, train_episodes = 200, log_interval = 10):
     print("TS Spec:", train_env.time_step_spec())
     ## Set up the agent
-    agent = MultiAgent.MultiAgent(
+    agent = MultiAgent(
             train_env.time_step_spec(), 
             train_env.action_spec(), 
             train_batch_size = 64,

@@ -1,4 +1,5 @@
-from Logging import *
+import cardshark
+from cardshark.logging import *
 import random
 
 ## define the initial deck configurations
