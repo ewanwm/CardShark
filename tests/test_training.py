@@ -16,7 +16,7 @@ from cardshark import logging as log
 from cardshark.multi_agent import MultiAgent
 from cardshark.engine import Game
 
-from examples.coup import coup_engine
+from examples.coup import coup_engine, coup_player
 
 log.INFO("TF Version: ", tf.__version__)
 

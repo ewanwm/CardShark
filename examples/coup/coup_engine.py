@@ -1,11 +1,15 @@
-
+# cardshark engine stuff
 from cardshark import engine
 from cardshark import cards
 from cardshark.player import Player
 from cardshark.logging import *
 
+# python stuff
 from enum import Enum
 import numpy as np
+
+# coup specific stuff
+from examples.coup import coup_player
 
 # TF stuff
 #TODO: abstract all tf_agents out into Game base class. User shouldn't have to touch it
@@ -99,7 +103,7 @@ class CoupGame(engine.Game):
         self.TRACE("  Creating players")
         self.playerList = []
         for _ in range(nPlayers):
-            self.playerList.append(Player(nCards = MAX_CARDS, logger = self.logger))
+            self.playerList.append(coup_player.CoupPlayer(nCards = MAX_CARDS, logger = self.logger))
 
         ## initialise the deck
         self.TRACE("  Creating deck")

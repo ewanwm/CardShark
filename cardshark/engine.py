@@ -29,7 +29,6 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
 
         NamedObject.__init__(self, **kwargs)
         
-
         DEBUG("Initialising Game:", self.name, ", with", nPlayers, "players")
 
     ## for returning general info about the environment, not things necessarily needed by agents as observations
