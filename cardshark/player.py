@@ -37,10 +37,10 @@ class Player(NamedObject, ABC):
         """
         return self.rewardAccum
 
-    def get_info_str() -> str:
+    def get_info_str(self) -> str:
         return ""
 
     def __str__(self) -> str:
-        retStr = "Name: " + self.name + "\n" + get_info_str()
+        retStr = "Name: " + self.name + "\n" + self.get_info_str()
 
         return retStr
