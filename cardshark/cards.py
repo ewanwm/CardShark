@@ -1,70 +1,63 @@
 import cardshark
 from cardshark.logging import *
 import random
-
-## define the initial deck configurations
-##       Name   |  Initial number
-cards = {"Duke":       4,
-         "Captain":    4,
-         "Assassin":   4,
-         "Contessa":   4,
-         "Inquisitor": 4
-}
-
-## used for converting card id to name
-cardNames  = list(cards.keys())
-cardString = ""
-for i, name in enumerate(cardNames): 
-    if i!= 0:
-        cardString = cardString + " " + name 
-    else: cardString = name
-## used for converting card name to id
-cardEnum   = Enum("cardEnum", cardString)
-DEBUG("cardString:", cardString)
-
-
+import typing
+from abc import ABC, abstractmethod
+from collections import Counter
 
 class Deck:
-    def __init__(self):
-        self.name = "Deck"
+    def __init__(self, cards: typing.Union[list, dict], name="Deck"):
+        self.name = name
+        
+        self._cards: list = []
+
+        if isinstance(cards, list):
+            self._cards = cards
+
+        elif isinstance(cards, dict):
+            for card in cards.keys():
+                for _ in range(cards[card]):
+                    self._cards.append(card)
+
+        # keep a copy of the original state of the deck for resetting later
+        self._init_cards = list(self._cards)
+
         self.reset()
 
     def reset(self):
-        self.Cards = []
-        for cardName in cards.keys():
-            for _ in range(cards[cardName]):
-                self.Cards.append(cardName)
+        self._cards = list(self._init_cards)
 
     def shuffle(self):
-        random.shuffle(self.Cards)
+        random.shuffle(self._cards)
 
     def draw(self):
-        if(len(self.Cards) <= 0):
+        if(len(self._cards) <= 0):
             raise Exception("ERROR: Trying to draw from a deck with <= 0 cards in it")
-        lastCard = self.Cards[-1]
-        self.Cards.pop(-1)
+        lastCard = self._cards[-1]
+        self._cards.pop(-1)
 
         return lastCard
     
-    def returnCard(self, cardName):
-        if not cardName in cards.keys():
-            raise Exception("ERROR: Trying to return unknown card " + str(cardName) + " to deck")
-        
-        self.Cards.append(cardName)
+    def add_card(self, cardName):
+        self._cards.append(cardName)
 
     def __str__(self):
         retStr = ""
         retStr += "Name: " + self.name + ", "
-        retStr += "N Cards: " + str(len(self.Cards)) + ", "
+        retStr += "N Cards: " + str(len(self._cards)) + ", "
+
+        counter = Counter(self._cards)
 
         retStr += "{"
-        for cardName in cards.keys():
-            retStr += cardName + ": " + str(self.Cards.count(cardName)) + ", "
-        retStr += "}, "
-
-        retStr += "["
-        for card in self.Cards:
-            retStr += card + ", "
-        retStr += "]"
+        for card in counter.keys():
+            retStr += card + ": " + str(self._cards.count(card)) + ", "
+        retStr += "}"
 
         return retStr
+
+class Card(ABC):
+    """ABC representing a card
+
+    This has basically no functionality or data and you're totally free to use it 
+    however you want to... it feels a bit pointless tbh
+    """

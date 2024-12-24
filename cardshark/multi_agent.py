@@ -1,4 +1,4 @@
-# other coup AI stuff
+# other cardshark stuff
 import cardshark
 from cardshark.logging import *
 from cardshark.named_object import NamedObject
