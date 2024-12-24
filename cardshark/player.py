@@ -1,6 +1,6 @@
-from Cards import *
 import numpy as np
-from named_object import NamedObject
+from cardshark.named_object import NamedObject
+from cardshark import cards
 
 class Player(NamedObject):
 
@@ -20,7 +20,7 @@ class Player(NamedObject):
         self.rewardAccum = 0
 
     def giveCard(self, cardName):
-        if not cardName in cards.keys():
+        if not cardName in cards.cards.keys():
             raise Exception("ERROR: Trying to give unknown card " + str(cardName) + " to player " + self.name)
 
         if len(self.Cards) >= self.nCards:

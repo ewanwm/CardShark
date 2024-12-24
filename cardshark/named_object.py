@@ -1,4 +1,5 @@
-from Logging import Logger
+import cardshark
+from cardshark.logging import Logger
 from collections import defaultdict
 
 class NamedObject:
