@@ -2,20 +2,22 @@
 import cardshark
 from cardshark.logging import *
 from cardshark.named_object import NamedObject
+from cardshark.engine import Game
 
 # python stuff
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-from enum import Enum
+from abc import ABC, abstractmethod
 
 # TF stuff
 from tensorflow import keras
 from tensorflow import function as tfFunction
 from tensorflow import Variable
+from tensorflow import convert_to_tensor
 
 # TF agents stuff
-from tf_agents.trajectories import trajectory
+from tf_agents.trajectories import trajectory, PolicyStep
 from tf_agents.policies.random_tf_policy import RandomTFPolicy
 from tf_agents.replay_buffers.tf_uniform_replay_buffer import TFUniformReplayBuffer
 from tf_agents.agents.dqn.dqn_agent import DqnAgent
@@ -25,8 +27,94 @@ from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
 from tf_agents.utils import common
 
+class AgentBase(NamedObject, ABC):
+    """Base class for "agents" i.e. a thing that takes observarions and returns an action.
 
-class MultiAgent(NamedObject):
+    This could be either a human player or an ML based agent
+    """
+
+    def __init__(self, **kwargs):
+        NamedObject.__init__(self, **kwargs)
+        
+        self._game_outcomes = []
+
+        
+    def _register_outcome(self, outcome: int):
+        ## add outcome to internal list of game outcomes (-1 for loss, 0 for inconclusive (game truncated), and +1 for win)
+        self._game_outcomes.append(outcome)
+
+    def register_win(self):
+        self._register_outcome(+1)
+
+    def register_loss(self):
+        self.register_outcome(-1)
+    
+    def register_inconclusive(self):
+        self._register_outcome(0)
+
+    def get_win_rate(self) -> float:
+        if len(self._game_outcomes) == 0:
+            return 0.0
+        
+        else:
+            return np.count(np.array(self._game_outcomes) == 1) / len(self._game_outcomes)
+
+    @abstractmethod
+    def get_action():
+        """Should take in an obervation and return an action
+        """
+        pass
+
+
+class HumanAgent(AgentBase, ABC):
+    """Base class to be used to represent a human player
+
+    User will need to implement the functionality to give game specific info to the player
+    and get a game specific action from them
+    """
+
+    def __init__(self, **kwargs):
+
+        super().__init__(**kwargs)
+        
+        self._game = None
+        self._player_id = None
+
+    def get_action(self):
+        """Get the action being performed by a player.
+        
+        Take the user defined numpy array action from the _get_action() fn 
+        and convert it to a format that the Game gym environment will like
+        """
+        action_ndim = self._get_action()
+
+        action_1dim = self._game.flatten_action(action_ndim)
+
+        action_tuple = PolicyStep()
+        action_tuple = action_tuple._replace(action=convert_to_tensor(action_1dim))
+
+        return action_tuple
+
+    @abstractmethod
+    def _get_action(self) -> np.ndarray:
+        """Return the action being performed by the human player
+
+        This should be in the form of a numpy array which matches the structure of
+        the action array used in the Game class that is being played
+        """
+        pass
+    
+
+    def register_game(self, game: Game, player_id: int):
+        """Set the Game being played by this player and their index of this player within the current game.
+
+        TODO: Make this more automated... it's a bit sloppy
+        """
+
+        self._game = game
+        self._player_id = player_id
+            
+class MultiAgent(AgentBase):
     """General agent class which keeps track of training data and outcomes of played games
 
 
@@ -49,7 +137,7 @@ class MultiAgent(NamedObject):
             **kwargs
         ):
 
-        super().__init__(**kwargs)
+        AgentBase.__init__(self, **kwargs)
 
         ## Set specified properties
         self._apply_mask = apply_mask
@@ -75,7 +163,6 @@ class MultiAgent(NamedObject):
 
         ## Set inital values
         self.losses = []
-        self._game_outcomes = []
         self._rewards = []
         self._step = Variable(0)
 
@@ -159,19 +246,6 @@ class MultiAgent(NamedObject):
         self._trainCheckpointer.initialize_or_restore()
         print(self._agent.policy)
 
-    def _register_outcome(self, outcome: int):
-        ## add outcome to internal list of game outcomes (-1 for loss, 0 for inconclusive (game truncated), and +1 for win)
-        self._game_outcomes.append(outcome)
-
-    def register_win(self):
-        self._register_outcome(+1)
-
-    def register_loss(self):
-        self.register_outcome(-1)
-    
-    def register_inconclusive(self):
-        self._register_outcome(0)
-
     ## Function to extract the observations and mask values to pass to the model
     def _obs_constraint_splitter(self):
         """Utility fn to construct the "observation constraint splitter to pass to the q agent
@@ -207,7 +281,7 @@ class MultiAgent(NamedObject):
         self.last_step = self.current_step
         self.current_step = timeStep
 
-    def _get_action(self, timeStep: tuple, collect: bool = False, random: bool = False):
+    def get_action(self, timeStep: tuple, collect: bool = False, random: bool = False):
         if random and collect:
             raise ValueError("have specified both collect and random policy, this is invalid")
         if random:
@@ -225,7 +299,7 @@ class MultiAgent(NamedObject):
         
         return action
 
-    def _add_frame(self):
+    def add_frame(self):
         if((self.last_step != None) and (self.current_step != None) and (self.last_policy_step != None)):
             self.DEBUG("Adding Frame")
             self.DEBUG("  last time step:   ", self.last_step)
@@ -258,41 +332,6 @@ class MultiAgent(NamedObject):
         self.losses.append(loss)
 
         return loss
-    
-    def step_environment(self, env, save_frame: bool, train: bool, collect: bool = False, random: bool = False):
-        raise NotImplementedError("""This method currently seems to be broken and I'm not yet sure why \n
-                                  Should instead use paradigm:
-
-                                    step = env.reset()
-                                    agent._set_current_step(step)
-                                    action = agent._get_action(step, ...)
-                                    ...
-                                    for _ in range(n_steps):
-                                
-                                        step = env.step(action)
-                                        agent._set_current_step(step)
-                                        agent._add_frame()
-                                        action = agent._get_action(step, collect=collect, random=random)
-                                        agent._train_agent()
-                                    ...
-                                  
-                                    for the time being
-                                  """)
-    
-        step = env.current_time_step()
-
-        self._set_current_step(step)
-
-        if save_frame:
-            self._add_frame()
-
-        action = self._get_action(step, collect=collect, random=random)
-
-        if train: 
-            train_loss = self._train_agent()
-            self.losses.append(train_loss)
-
-        return env.step(action)
             
 
     def plot_training_losses(self):
@@ -309,11 +348,3 @@ class MultiAgent(NamedObject):
         plt.ylabel("Reward")
         plt.show()
         
-    def get_win_rate(self) -> float:
-        if len(self._game_outcomes) == 0:
-            return 0.0
-        
-        else:
-            return np.count(np.array(self._game_outcomes) == 1) / len(self._game_outcomes)
-
-            
