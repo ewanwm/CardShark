@@ -20,14 +20,14 @@ class Player(NamedObject, ABC):
         """Give reward to this player for a job well done
         """
 
-        self.INFO("Giving reward:", reward)
+        self.DEBUG("Giving reward:", reward)
         self.rewardAccum += reward
         self.DEBUG("  Reward after:", self.rewardAccum)
 
     def claimReward(self) -> float:
         """Get the total reward given to this player until now and set it's reward back to 0
         """
-        self.INFO("Claiming reward:",self.rewardAccum)
+        self.DEBUG("Claiming reward:",self.rewardAccum)
         ret = self.rewardAccum
         self.rewardAccum = 0.0
         return ret

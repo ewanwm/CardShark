@@ -35,15 +35,15 @@ actions = {"None":        {"needs":"",           "blockedBy":[""],              
 
 
 ## used for converting action id to name
-actionNames  = list(actions.keys())
-actionString = ""
-for i, name in enumerate(actionNames): 
+action_names  = list(actions.keys())
+action_string = ""
+for i, name in enumerate(action_names): 
     if i != 0:
-        actionString = actionString + " " + name 
-    else: actionString = name
+        action_string = action_string + " " + name 
+    else: action_string = name
 ## used for converting action name to id
-actionEnum = Enum("actionEnum", actionString)
-DEBUG("actionString:", actionString)
+actionEnum = Enum("actionEnum", action_string)
+DEBUG("action_string:", action_string)
 
 class CoupGame(engine.Game):
 
@@ -102,9 +102,9 @@ class CoupGame(engine.Game):
 
         ## initialise the players
         self.TRACE("  Creating players")
-        self.playerList = []
+        self.player_list = []
         for _ in range(nPlayers):
-            self.playerList.append(coup_player.CoupPlayer(nCards = MAX_CARDS, logger = self.logger))
+            self.player_list.append(coup_player.CoupPlayer(nCards = MAX_CARDS, logger = self.logger))
 
         ## initialise the deck
         self.TRACE("  Creating deck")
@@ -123,7 +123,7 @@ class CoupGame(engine.Game):
         ## 5th variable is whether or not to challenge the attempted block
         retStr = "Action: {action}, Target: {target}, {block}, {challenge}, {challenge_block}"
 
-        actionStr = actionNames[action[0]]
+        actionStr = action_names[action[0]]
 
         if action[1] == self.nPlayers - 1: targetStr = "None"
         else: targetStr = action[1]
@@ -142,7 +142,7 @@ class CoupGame(engine.Game):
     def _reset(self):
         self.DEBUG("Resetting game")
         ## set individual pieces back to initial state
-        for player in self.playerList:
+        for player in self.player_list:
             player.reset()
 
         self.Deck.reset()
@@ -152,12 +152,12 @@ class CoupGame(engine.Game):
 
         ## hand out the cards
         for _ in range(MAX_CARDS):
-            for player in self.playerList:
+            for player in self.player_list:
                 player.giveCard(self.Deck.draw())
         
         self.DEBUG("deck after dealing:", self.Deck)
         self.DEBUG("Players:")
-        for player in self.playerList: self.DEBUG("  ", player)
+        for player in self.player_list: self.DEBUG("  ", player)
 
         ## set initial game state
         self.gameState = ActionState
@@ -176,7 +176,7 @@ class CoupGame(engine.Game):
         self._info["skippingTurn"] = False
 
         return ts.restart(observation ={"observation": self.getObservation(self.activePlayer),
-                                        "mask": self.getMask(self.activePlayer),
+                                        "mask": self.get_mask(self.activePlayer),
                                         "activePlayer": self.activePlayer
                                         }
                          )
@@ -185,41 +185,42 @@ class CoupGame(engine.Game):
     #### These are the functions that actually perform the actions specified by the players ####
     ############################################################################################
     def _Income(self, p):
-        player = self.playerList[p]
-        self.INFO(" Player: ", player.name, "Action: Income")
+        player = self.player_list[p]
+        self.INFO("  - Player: " + player.name + " performed action: Income (+1 coin)")
         player.giveCoins(1)
 
         player.giveReward(1)
 
     def _ForeignAid(self, p):
-        player = self.playerList[p]
-        self.INFO(" Player: ", player.name, "Action: ForeignAid")
+        player = self.player_list[p]
+        self.INFO("  - Player: " + player.name + " performed action: ForeignAid (+2 coins)")
         player.giveCoins(2)
         
         player.giveReward(2)
 
     def _Coup(self, p1, p2):
-        player1, player2 = self.playerList[p1], self.playerList[p2]
-        self.INFO(" Player: ", player1.name, "Action: Coup, Target: ", player2.name)
+        player1, player2 = self.player_list[p1], self.player_list[p2]
+        self.INFO("  - Player: " + player1.name + " performed action: Coup, Target: " + player2.name)
         player1.takeCoins(actions["Coup"]["cost"])
         player2.loseInfluence()
         
         player1.giveReward(10)
 
     def _Tax(self, p):
-        player = self.playerList[p]
-        self.INFO(" Player: ", player.name, "Action: Tax")
+        player = self.player_list[p]
+        self.INFO("  - Player: " + player.name + " performed action: Tax (+3 coins)")
         player.giveCoins(3)
         player.giveReward(3)
 
     def _Steal(self, p1, p2):
-        player1, player2 = self.playerList[p1], self.playerList[p2]
-        self.INFO(" Player: ", player1.name, "Action: Steal, Target: ", player2.name)
+        player1, player2 = self.player_list[p1], self.player_list[p2]
 
         ## do this to avoid trying to steal 2 coins when target player doesn't have enoug
         ## this should probably be masked out but I'm not sure how to do that easily as it requires masking a specific combination of actions, (steal and specific players)
         ## BUT it's probably ok since the agents should learn to e.g. not steal from someone with 0 coins
         coinsToSteal = min(player2.Coins, 2)
+        
+        self.INFO("  - Player: " + player1.name + " performed action: Steal, Target: " + player2.name + " (stole {})".format(coinsToSteal))
 
         player2.takeCoins(coinsToSteal)
         player1.giveCoins(coinsToSteal)
@@ -228,8 +229,8 @@ class CoupGame(engine.Game):
         player1.giveReward(coinsToSteal)
 
     def _Assasinate(self, p1, p2):
-        player1, player2 = self.playerList[p1], self.playerList[p2]
-        self.INFO(" Player: ", player1.name, "Action: Assassinate, Target: ", player2.name)
+        player1, player2 = self.player_list[p1], self.player_list[p2]
+        self.INFO("  - Player: " + player1.name + " performed action: Assassinate, Target: " + player2.name)
         player1.takeCoins(3)
         player2.loseInfluence()
 
@@ -243,6 +244,9 @@ class CoupGame(engine.Game):
         raise Exception("ERROR: Exchange() not implemented yet")
         ## not yet implemented
     
+    def is_targetted_action(self, action: str):
+        return actions[action]["targeted"]
+
     def performAttemptedAction(self):
         fn = self.__getattribute__("_" + self.attemptedAction) ## get the function corresponding to the attempted action
 
@@ -258,7 +262,7 @@ class CoupGame(engine.Game):
         ## returns true if game is finished, false otherwise
         
         ## first check each player
-        for player in self.playerList:
+        for player in self.player_list:
             allCardsDead = True
             for cardId in range(MAX_CARDS):
                 if player.CardStates[cardId] == "Alive":
@@ -268,17 +272,17 @@ class CoupGame(engine.Game):
                 player.kill()
 
         aliveCount = 0
-        for player in self.playerList:
+        for player in self.player_list:
             if player.isAlive:
                 aliveCount += 1
 
         if aliveCount == 1:
             self.INFO("=========== GAME OVER ===========")
             
-            for playerIdx, player in enumerate(self.playerList):
+            for playerIdx, player in enumerate(self.player_list):
                 if player.isAlive:
                     self.INFO("")
-                    self.INFO("  ** Player", player, "Wins! **")
+                    self.INFO("  ** Player " + player.name + " Wins! **")
                     self._winner = playerIdx
                     player.giveReward(50)
 
@@ -286,10 +290,8 @@ class CoupGame(engine.Game):
             
         return False
 
-    def getMask(self, playerIdx: int) -> np.array:
-        ## get action space mask for player at index playerIdx in this games player list
-        self.DEBUG("Getting action mask for player", self.playerList[playerIdx].name, "at index", playerIdx)
-
+    def get_mask_ndim(self, playerIdx: int):
+        
         ## make the action space spec
         ## 1st variable is which action to take in the "action" phase of the game
         ## 2nd variable is which other player to target if applicable
@@ -304,12 +306,12 @@ class CoupGame(engine.Game):
         maskList.append(np.ndarray((2,), dtype=np.int8))
 
         if(self.gameState == ActionState):
-            if self.playerList[playerIdx].Coins < 10: ##10:
+            if self.player_list[playerIdx].Coins < 10: ##10:
                 ## if player has >= 10 they can only perform a coup
                 ## and their only choice is which player to target
                 ## so we leave all mask values for actions at their default value of 0
                 for i, action in enumerate(actions.keys()):
-                    if self.playerList[playerIdx].Coins >= actions[action]["cost"]:
+                    if self.player_list[playerIdx].Coins >= actions[action]["cost"]:
                         maskList[0][i] = 1 
                     else: 
                         maskList[0][i] = 0
@@ -331,7 +333,7 @@ class CoupGame(engine.Game):
 
             ## can only target players that are alive
             for id in range(1, self.nPlayers):
-                if self.playerList[(id + playerIdx) % self.nPlayers].isAlive:
+                if self.player_list[(id + playerIdx) % self.nPlayers].isAlive:
                     maskList[1][id - 1] = 1
                 else:
                     maskList[1][id - 1] = 0
@@ -370,11 +372,19 @@ class CoupGame(engine.Game):
                 maskList[i][:] = 0
 
         ## If dead, player cant do anything
-        if(not self.playerList[playerIdx].isAlive):
+        if(not self.player_list[playerIdx].isAlive):
             for i in range(len(maskList)):
                 maskList[i][:] = 0
 
         self.DEBUG("Mask: ", maskList)
+
+        return maskList
+
+    def get_mask(self, playerIdx: int) -> np.array:
+        ## get action space mask for player at index playerIdx in this games player list
+        self.DEBUG("Getting action mask for player", self.player_list[playerIdx].name, "at index", playerIdx)
+
+        maskList = self.get_mask_ndim(playerIdx)
 
         if(self._unravelActionSpace):
             self.DEBUG("Unravelling mask")
@@ -382,7 +392,7 @@ class CoupGame(engine.Game):
 
             self.DEBUG("  Allowed actions after unravelling: ")
             ## Now need to unravel the mask using the flattenedActionSpace found before
-            for action in self._unravelledActionSpace:
+            for action in self._unravelled_action_space:
                 allAllowed = 1
                 for i, subAction in enumerate(action):
                     allAllowed *= maskList[i][subAction]
@@ -395,28 +405,28 @@ class CoupGame(engine.Game):
         return mask
 
     def getObservation(self, playerIdx: int) -> np.ndarray:
-        self.DEBUG("Getting observation for player", self.playerList[playerIdx].name, "at index", playerIdx)
+        self.DEBUG("Getting observation for player", self.player_list[playerIdx].name, "at index", playerIdx)
         ## get observarion for player at index playerIdx in this games player list
         observation = np.ndarray((self.nPlayers, 1 + MAX_CARDS), dtype=np.float32)
 
         ## first fill in the observation for this player, always the first row in the observation 
         ## so that any player will always see itself at the first position
         self.TRACE("Adding this players info")
-        observation[0,0] = self.playerList[playerIdx].Coins
+        observation[0,0] = self.player_list[playerIdx].Coins
         ## can always see own cards
         for i in range(MAX_CARDS):
-            observation[0, 1 + i] = coup_cards.cardEnum[self.playerList[playerIdx].Cards[i]].value
+            observation[0, 1 + i] = coup_cards.cardEnum[self.player_list[playerIdx].Cards[i]].value
 
         ## for the rest of the observation we fill up the equivalent for other players
         for otherPlayerCounter in range(1, self.nPlayers):
             otherPlayerIdx = (playerIdx + otherPlayerCounter) % self.nPlayers
-            self.TRACE("adding info from player", self.playerList[otherPlayerIdx].name, "at index", otherPlayerIdx)
-            observation[otherPlayerCounter, 0] = self.playerList[otherPlayerIdx].Coins
+            self.TRACE("adding info from player", self.player_list[otherPlayerIdx].name, "at index", otherPlayerIdx)
+            observation[otherPlayerCounter, 0] = self.player_list[otherPlayerIdx].Coins
 
             ## can only see other players cards if they are dead                
             for i in range(MAX_CARDS):
-                if self.playerList[otherPlayerIdx].CardStates[i] == "Dead":
-                    observation[otherPlayerCounter, 1 + i] = coup_cards.cardEnum[self.playerList[otherPlayerIdx].Cards[i]].value     
+                if self.player_list[otherPlayerIdx].CardStates[i] == "Dead":
+                    observation[otherPlayerCounter, 1 + i] = coup_cards.cardEnum[self.player_list[otherPlayerIdx].Cards[i]].value     
                 else:   
                     observation[otherPlayerCounter, 1 + i] = 0.0
 
@@ -425,17 +435,17 @@ class CoupGame(engine.Game):
     
     def swapCard(self, p, card):
         ## take card from player, return to deck, shuffle then draw a new one
-        player=self.playerList[p]
+        player=self.player_list[p]
         player.takeCard(card)
         self.INFO("Player", player.name, "Swapping card", card)
         self.Deck.add_card(card)
         self.Deck.shuffle()
         newCard = self.Deck.draw()
         player.giveCard(newCard)
-        self.INFO("       was swapped for", newCard)
+        self.DEBUG("       was swapped for", newCard)
 
     def challenge(self, p1, p2, *cards):
-        player1, player2 = self.playerList[p1], self.playerList[p2]
+        player1, player2 = self.player_list[p1], self.player_list[p2]
         self.DEBUG("Player", player1.name, "challenging Player", player2.name, "on having one of", *cards)
 
         ## first shuffle order of the cards just to be extra fair
@@ -459,8 +469,8 @@ class CoupGame(engine.Game):
 class ActionState(engine.GameState):
 
     def handle(action: np.ndarray, game: CoupGame) -> engine.GameState:
-        if not game.playerList[game.currentPlayer_action].isAlive:
-            game.INFO(game.playerList[game.currentPlayer_action].name, "is dead! skipping their action")
+        if not game.player_list[game.currentPlayer_action].isAlive:
+            game.INFO(game.player_list[game.currentPlayer_action].name, "is dead! skipping their action")
             game._info["skippingTurn"] = True
             game.currentPlayer_action = (game.currentPlayer_action + 1) % game.nPlayers
             game.activePlayer = game.currentPlayer_action
@@ -468,8 +478,8 @@ class ActionState(engine.GameState):
             return ActionState
 
         else:
-            game.attemptedAction = actionNames[action[0]]
-            game.INFO("Player", game.playerList[game.currentPlayer_action].name, "is attempting action", game.attemptedAction)
+            game.attemptedAction = action_names[action[0]]
+            game.INFO("Player", game.player_list[game.currentPlayer_action].name, "is attempting action", game.attemptedAction)
             
             blockable = False
             targetted = False
@@ -477,7 +487,7 @@ class ActionState(engine.GameState):
             ## first check if this action has a target
             if actions[game.attemptedAction]["targeted"]:
                 game.action_target = (game.currentPlayer_action + 1 + action[1]) % game.nPlayers
-                game.INFO("Targetting player", game.playerList[game.action_target].name, "at index", game.action_target)
+                game.INFO("Targetting player", game.player_list[game.action_target].name, "at index", game.action_target)
                 targetted = True
             else:
                 game.DEBUG("Not a targetted action")
@@ -530,8 +540,8 @@ class ActionState(engine.GameState):
 class BlockingGeneralState(engine.GameState):
     
     def handle(action: np.ndarray, game: CoupGame) -> engine.GameState:
-        if not game.playerList[game.currentPlayer_block].isAlive:
-            game.INFO(game.playerList[game.currentPlayer_block].name, "is dead so they can't really block anything")
+        if not game.player_list[game.currentPlayer_block].isAlive:
+            game.INFO(game.player_list[game.currentPlayer_block].name, "is dead so they can't really block anything")
             game._info["skippingTurn"] = True
             game.currentPlayer_block = (game.currentPlayer_block + 1) % game.nPlayers
             game.activePlayer = game.currentPlayer_block
@@ -550,13 +560,13 @@ class BlockingGeneralState(engine.GameState):
             
             else:
                 if action[2] == 1: 
-                    game.INFO("player", game.playerList[game.currentPlayer_block].name, "is attempting to block current action,", game.attemptedAction)
+                    game.INFO("player", game.player_list[game.currentPlayer_block].name, "is attempting to block current action,", game.attemptedAction)
                     game.activePlayer = game.currentPlayer_action
                     return ChallengeBlockState
 
                 elif action[2] == 0:
                     ## we dont change state, just move to the next player and let them block if they want
-                    game.INFO("player", game.playerList[game.currentPlayer_block].name, "did not try to block current action,", game.attemptedAction)
+                    game.INFO("player", game.player_list[game.currentPlayer_block].name, "did not try to block current action,", game.attemptedAction)
                     game.currentPlayer_block = (game.currentPlayer_block + 1) % game.nPlayers
                     game.activePlayer = game.currentPlayer_block
 
@@ -567,13 +577,13 @@ class BlockingTargetState(engine.GameState):
     
     def handle(action: np.ndarray, game: CoupGame) -> engine.GameState:
         if action[2] == 1: 
-            game.INFO("player", game.playerList[game.currentPlayer_block].name, "is attempting to block current action,", game.attemptedAction)
+            game.INFO("player", game.player_list[game.currentPlayer_block].name, "is attempting to block current action,", game.attemptedAction)
             game.activePlayer = game.currentPlayer_action
             
             return ChallengeBlockState
 
         else:
-            game.INFO("action was not challenged by", game.playerList[game.currentPlayer_block].name)
+            game.INFO("action was not challenged by", game.player_list[game.currentPlayer_block].name)
             game.performAttemptedAction()
             game.currentPlayer_action = (game.currentPlayer_action + 1) % game.nPlayers
             game.activePlayer = game.currentPlayer_action
@@ -584,8 +594,8 @@ class BlockingTargetState(engine.GameState):
 class ChallengeGeneralState(engine.GameState):
     
     def handle(action: np.ndarray, game: CoupGame) -> engine.GameState:
-        if not game.playerList[game.currentPlayer_challenge].isAlive:
-            game.INFO(game.playerList[game.currentPlayer_challenge].name, "is dead so they can't really challenge anything")
+        if not game.player_list[game.currentPlayer_challenge].isAlive:
+            game.INFO(game.player_list[game.currentPlayer_challenge].name, "is dead so they can't really challenge anything")
             game._info["skippingTurn"] = True
             game.currentPlayer_challenge = (game.currentPlayer_challenge + 1) % game.nPlayers
             game.activePlayer = game.currentPlayer_challenge
@@ -604,7 +614,7 @@ class ChallengeGeneralState(engine.GameState):
 
             else:
                 if action[3] == 1: 
-                    game.INFO("player", game.playerList[game.currentPlayer_challenge].name, "is challenging", game.playerList[game.currentPlayer_action].name, "on their action,", game.attemptedAction)
+                    game.INFO("player", game.player_list[game.currentPlayer_challenge].name, "is challenging", game.player_list[game.currentPlayer_action].name, "on their action,", game.attemptedAction)
                     if game.challenge(game.currentPlayer_challenge, game.currentPlayer_action, actions[game.attemptedAction]["needs"]) == "failed":
                         game.performAttemptedAction()
                     
@@ -615,7 +625,7 @@ class ChallengeGeneralState(engine.GameState):
                     return ActionState
 
                 elif action[3] == 0:
-                    game.INFO("player", game.playerList[game.currentPlayer_challenge].name, "did not attempt to challenge")
+                    game.INFO("player", game.player_list[game.currentPlayer_challenge].name, "did not attempt to challenge")
                     ## we dont change state, just move to the next player and let them block if they want
                     game.currentPlayer_challenge = (game.currentPlayer_challenge + 1) % game.nPlayers
                     game.activePlayer = game.currentPlayer_challenge
@@ -628,12 +638,12 @@ class ChallengeTargetState(engine.GameState):
     
     def handle(action: np.ndarray, game: CoupGame) -> engine.GameState:
         if action[3] == 1: 
-            game.INFO("player", game.playerList[game.currentPlayer_challenge].name, "is attempting to challenge current action,", game.attemptedAction)
+            game.INFO("player", game.player_list[game.currentPlayer_challenge].name, "is attempting to challenge current action,", game.attemptedAction)
             if game.challenge(game.currentPlayer_challenge, game.currentPlayer_action, actions[game.attemptedAction]["needs"]) == "failed":
                 game.performAttemptedAction()
                 
         else:
-            game.INFO("action was not challenged by",game.playerList[game.currentPlayer_challenge].name)
+            game.INFO("action was not challenged by",game.player_list[game.currentPlayer_challenge].name)
             game.performAttemptedAction()
             
         game.currentPlayer_action = (game.currentPlayer_action + 1) % game.nPlayers
@@ -645,12 +655,12 @@ class ChallengeBlockState(engine.GameState):
     
     def handle(action: np.ndarray, game: CoupGame) -> engine.GameState:
         if action[4] == 1: 
-            game.INFO("player", game.playerList[game.currentPlayer_action].name, "is challenging the attempt by",game.playerList[game.currentPlayer_block].name, "to block their action,", game.attemptedAction)
+            game.INFO("player", game.player_list[game.currentPlayer_action].name, "is challenging the attempted block by",game.player_list[game.currentPlayer_block].name, "to block their action,", game.attemptedAction)
             game.challenge(game.currentPlayer_action, game.currentPlayer_block, *actions[game.attemptedAction]["blockedBy"])
         else:
-            game.INFO("player", game.playerList[game.currentPlayer_action].name, "accepts attempt by",game.playerList[game.currentPlayer_block].name, "to block their action,", game.attemptedAction)
-            game.playerList[game.currentPlayer_action].giveReward(-3)
-            game.playerList[game.currentPlayer_block].giveReward(3)
+            game.INFO("player", game.player_list[game.currentPlayer_action].name, "accepts attempted block by",game.player_list[game.currentPlayer_block].name, "to block their action,", game.attemptedAction)
+            game.player_list[game.currentPlayer_action].giveReward(-3)
+            game.player_list[game.currentPlayer_block].giveReward(3)
 
         game.currentPlayer_action = (game.currentPlayer_action + 1) % game.nPlayers
         game.activePlayer = game.currentPlayer_action

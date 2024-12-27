@@ -15,7 +15,7 @@ print('Elapsed time: ' + str(end - start))
 
 print('\nimport Coup AI modules')
 start = timer()
-from cardshark.multi_agent import MultiAgent
+from cardshark.agent import MultiAgent
 from cardshark import logging 
 end = timer()
 print('Elapsed time: ' + str(end - start))
@@ -55,7 +55,7 @@ def runEpisodeSingleAgent(train: bool, # <- Whether to train the agent during th
 
     step = env.reset()
     agent._set_current_step(step)
-    action = agent._get_action(step, collect=collect, random=random)
+    action = agent.get_action(step, collect=collect, random=random)
 
     if toVideo:
         ## might need to account for the batch dimension
@@ -72,9 +72,9 @@ def runEpisodeSingleAgent(train: bool, # <- Whether to train the agent during th
         step = env.step(action)
 
         agent._set_current_step(step)
-        agent._add_frame()
+        agent.add_frame()
 
-        action = agent._get_action(step, collect=collect, random=random)
+        action = agent.get_action(step, collect=collect, random=random)
         
         if train: 
             losses.append(agent.train_agent().numpy())
