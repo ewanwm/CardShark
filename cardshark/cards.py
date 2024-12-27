@@ -1,14 +1,14 @@
-import cardshark
 from cardshark.logging import *
 import random
 import typing
-from abc import ABC, abstractmethod
+from abc import ABC
 from collections import Counter
+
 
 class Deck:
     def __init__(self, cards: typing.Union[list, dict], name="Deck"):
         self.name = name
-        
+
         self._cards: list = []
 
         if isinstance(cards, list):
@@ -31,13 +31,13 @@ class Deck:
         random.shuffle(self._cards)
 
     def draw(self):
-        if(len(self._cards) <= 0):
+        if len(self._cards) <= 0:
             raise Exception("ERROR: Trying to draw from a deck with <= 0 cards in it")
         lastCard = self._cards[-1]
         self._cards.pop(-1)
 
         return lastCard
-    
+
     def add_card(self, cardName):
         self._cards.append(cardName)
 
@@ -55,9 +55,10 @@ class Deck:
 
         return retStr
 
+
 class Card(ABC):
     """ABC representing a card
 
-    This has basically no functionality or data and you're totally free to use it 
+    This has basically no functionality or data and you're totally free to use it
     however you want to... it feels a bit pointless tbh
     """

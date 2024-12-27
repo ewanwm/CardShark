@@ -20,12 +20,12 @@ from tensorflow import convert_to_tensor
 from tf_agents.trajectories import trajectory, PolicyStep
 from tf_agents.policies.random_tf_policy import RandomTFPolicy
 from tf_agents.replay_buffers.tf_uniform_replay_buffer import TFUniformReplayBuffer
-from tf_agents.agents.dqn.dqn_agent import DqnAgent
 from tf_agents.networks import categorical_q_network
 from tf_agents.agents.categorical_dqn import categorical_dqn_agent
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
 from tf_agents.utils import common
+
 
 class AgentBase(NamedObject, ABC):
     """Base class for "agents" i.e. a thing that takes observarions and returns an action.
@@ -35,10 +35,9 @@ class AgentBase(NamedObject, ABC):
 
     def __init__(self, **kwargs):
         NamedObject.__init__(self, **kwargs)
-        
+
         self._game_outcomes = []
 
-        
     def _register_outcome(self, outcome: int):
         ## add outcome to internal list of game outcomes (-1 for loss, 0 for inconclusive (game truncated), and +1 for win)
         self._game_outcomes.append(outcome)
@@ -48,21 +47,22 @@ class AgentBase(NamedObject, ABC):
 
     def register_loss(self):
         self.register_outcome(-1)
-    
+
     def register_inconclusive(self):
         self._register_outcome(0)
 
     def get_win_rate(self) -> float:
         if len(self._game_outcomes) == 0:
             return 0.0
-        
+
         else:
-            return np.count(np.array(self._game_outcomes) == 1) / len(self._game_outcomes)
+            return np.count(np.array(self._game_outcomes) == 1) / len(
+                self._game_outcomes
+            )
 
     @abstractmethod
     def get_action():
-        """Should take in an obervation and return an action
-        """
+        """Should take in an obervation and return an action"""
         pass
 
 
@@ -74,16 +74,15 @@ class HumanAgent(AgentBase, ABC):
     """
 
     def __init__(self, **kwargs):
-
         super().__init__(**kwargs)
-        
+
         self._game = None
         self._player_id = None
 
     def get_action(self):
         """Get the action being performed by a player.
-        
-        Take the user defined numpy array action from the _get_action() fn 
+
+        Take the user defined numpy array action from the _get_action() fn
         and convert it to a format that the Game gym environment will like
         """
         action_ndim = self._get_action()
@@ -103,7 +102,6 @@ class HumanAgent(AgentBase, ABC):
         the action array used in the Game class that is being played
         """
         pass
-    
 
     def register_game(self, game: Game, player_id: int):
         """Set the Game being played by this player and their index of this player within the current game.
@@ -113,36 +111,34 @@ class HumanAgent(AgentBase, ABC):
 
         self._game = game
         self._player_id = player_id
-            
+
+
 class MultiAgent(AgentBase):
-    """General agent class which keeps track of training data and outcomes of played games
+    """General agent class which keeps track of training data and outcomes of played games"""
 
-
-    """
-
-    def __init__(self,
-            ## positional args to pass through to the DqnAgent
-            time_step_spec: ts.TimeStep,
-            action_spec: types.NestedTensorSpec,
-            ## optional args for MultiAgent
-            observation_spec = None,
-            train_batch_size: int = 4,
-            max_buffer_length: int = 1000,
-            apply_mask: bool = True,
-            fc_layer_params: tuple = (100,),
-            checkpoint = False,
-            checkpoint_path: str = None,
-            ## optional DqnAgent args
-            DqnAgent_args = {},
-            **kwargs
-        ):
-
+    def __init__(
+        self,
+        ## positional args to pass through to the DqnAgent
+        time_step_spec: ts.TimeStep,
+        action_spec: types.NestedTensorSpec,
+        ## optional args for MultiAgent
+        observation_spec=None,
+        train_batch_size: int = 4,
+        max_buffer_length: int = 1000,
+        apply_mask: bool = True,
+        fc_layer_params: tuple = (100,),
+        checkpoint=False,
+        checkpoint_path: str = None,
+        ## optional DqnAgent args
+        DqnAgent_args={},
+        **kwargs,
+    ):
         AgentBase.__init__(self, **kwargs)
 
         ## Set specified properties
         self._apply_mask = apply_mask
         self.train_bs = train_batch_size
-    
+
         self._time_step_spec = time_step_spec
         self.DEBUG("TIME STEP SPEC:", self._time_step_spec)
 
@@ -153,20 +149,23 @@ class MultiAgent(AgentBase):
         if observation_spec == None:
             self._observation_spec = self._time_step_spec.observation
         else:
-            self._observation_spec = observation_spec  
+            self._observation_spec = observation_spec
 
         if checkpoint_path == None:
             checkpoint_path = os.path.join("Checkpoints", self.name)
 
         self._checkpoint_path = checkpoint_path
 
-
         ## Set inital values
         self.losses = []
         self._rewards = []
         self._step = Variable(0)
 
-        self.random_policy = RandomTFPolicy(self._time_step_spec, self._action_spec, observation_and_action_constraint_splitter = self._obs_constraint_splitter())
+        self.random_policy = RandomTFPolicy(
+            self._time_step_spec,
+            self._action_spec,
+            observation_and_action_constraint_splitter=self._obs_constraint_splitter(),
+        )
         self.current_step = None
         self.last_step = None
         self.last_policy_step = None
@@ -184,7 +183,7 @@ class MultiAgent(AgentBase):
             observation_and_action_constraint_splitter=self._obs_constraint_splitter(),
             gamma=0.99,
             train_step_counter=self._step,
-            **DqnAgent_args
+            **DqnAgent_args,
         )
 
         self._agent.initialize()
@@ -196,48 +195,46 @@ class MultiAgent(AgentBase):
         self._replay_buffer = TFUniformReplayBuffer(
             data_spec=self._agent.training_data_spec,
             batch_size=1,
-            max_length=max_buffer_length
+            max_length=max_buffer_length,
         )
 
         self.DEBUG("Replay buffer initialised:", self._replay_buffer)
         self.DEBUG("           With data spec:", self._replay_buffer.data_spec)
 
         self.experience_dataset = self._replay_buffer.as_dataset(
-            num_parallel_calls=3,
-            sample_batch_size=self.train_bs,
-            num_steps=2 + 1).prefetch(3)
+            num_parallel_calls=3, sample_batch_size=self.train_bs, num_steps=2 + 1
+        ).prefetch(3)
 
         self.experience_iterator = iter(self.experience_dataset)
-        
+
         ## make the checkpointer
         if checkpoint:
             self._trainCheckpointer = common.Checkpointer(
-                ckpt_dir = self._checkpoint_path,
-                max_to_keep = 1,
-                agent = self._agent,
-                policy = self._agent.policy,
-                replay_buffer = self._replay_buffer,
-                global_step = self._step
+                ckpt_dir=self._checkpoint_path,
+                max_to_keep=1,
+                agent=self._agent,
+                policy=self._agent.policy,
+                replay_buffer=self._replay_buffer,
+                global_step=self._step,
             )
 
         ## Wrap these in tf functions to speed things up a bit
         self._agent.train = common.function(self._agent.train)
 
-    
     @tfFunction
     def _action_from_policy(self, policy, time_step):
         return policy.action(time_step)
-    
-    ## specific functions for getting different actions from policies, each one is just a wrapper for the above tf function 
+
+    ## specific functions for getting different actions from policies, each one is just a wrapper for the above tf function
     def _random_action(self, time_step):
         return self._action_from_policy(self.random_policy, time_step)
-    
+
     def _collect_action(self, time_step):
         return self._action_from_policy(self._agent.collect_policy, time_step)
-    
+
     def _inference_action(self, time_step):
         return self._action_from_policy(self._agent.policy, time_step)
-        
+
     def save_checkpoint(self):
         ## TODO: make a subclass of the tfagent we want to use which has all internal variables defined as TF variables so the whole thing can be saved to a checkpoint maybe?
         self._trainCheckpointer.save(self._step)
@@ -253,28 +250,24 @@ class MultiAgent(AgentBase):
         This is used to split the observation before passing to the network.
         This is needed if the environment provides a mask.
         """
-        
-        if self._apply_mask:
-            #@tfFunction
-            def retFn(observationDict):
 
+        if self._apply_mask:
+            # @tfFunction
+            def retFn(observationDict):
                 self.TRACE("Observation dict:", observationDict)
                 return (observationDict["observations"], observationDict["mask"])
 
             return retFn
-        
+
         ## can just return none then won't be used when initialising the DQN agent
         else:
             return None
 
     def _build_q_net(self, fc_layer_params):
-
         self.q_net = categorical_q_network.CategoricalQNetwork(
-            self._observation_spec,
-            self._action_spec,
-            fc_layer_params=fc_layer_params
+            self._observation_spec, self._action_spec, fc_layer_params=fc_layer_params
         )
-        
+
         return
 
     def _set_current_step(self, timeStep: tuple):
@@ -283,7 +276,9 @@ class MultiAgent(AgentBase):
 
     def get_action(self, timeStep: tuple, collect: bool = False, random: bool = False):
         if random and collect:
-            raise ValueError("have specified both collect and random policy, this is invalid")
+            raise ValueError(
+                "have specified both collect and random policy, this is invalid"
+            )
         if random:
             policy_step = self._random_action(self.current_step)
         elif collect:
@@ -296,19 +291,25 @@ class MultiAgent(AgentBase):
         action = policy_step.action
 
         self.DEBUG("Passing action", action, "to env")
-        
+
         return action
 
     def add_frame(self):
-        if((self.last_step != None) and (self.current_step != None) and (self.last_policy_step != None)):
+        if (
+            (self.last_step != None)
+            and (self.current_step != None)
+            and (self.last_policy_step != None)
+        ):
             self.DEBUG("Adding Frame")
             self.DEBUG("  last time step:   ", self.last_step)
             self.DEBUG("  last action:      ", self.last_policy_step)
             self.DEBUG("  current time step:", self.current_step)
 
-            traj = trajectory.from_transition(time_step = self.last_step, 
-                                              action_step = self.last_policy_step, 
-                                              next_time_step = self.current_step)
+            traj = trajectory.from_transition(
+                time_step=self.last_step,
+                action_step=self.last_policy_step,
+                next_time_step=self.current_step,
+            )
 
             self.DEBUG("  Trajectory:", traj)
             self._replay_buffer.add_batch(traj)
@@ -326,13 +327,12 @@ class MultiAgent(AgentBase):
         self.DEBUG("  Loss:", train_loss)
 
         return train_loss
-    
+
     def train_agent(self):
         loss = self._train_agent()
         self.losses.append(loss)
 
         return loss
-            
 
     def plot_training_losses(self):
         plt.plot(list(range(len(self.losses))), self.losses)
@@ -347,4 +347,3 @@ class MultiAgent(AgentBase):
         plt.xlabel("Step")
         plt.ylabel("Reward")
         plt.show()
-        

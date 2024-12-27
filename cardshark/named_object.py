@@ -1,6 +1,6 @@
-import cardshark
 from cardshark.logging import Logger
 from collections import defaultdict
+
 
 class NamedObject:
     """
@@ -13,35 +13,39 @@ class NamedObject:
     """
 
     instance_counts = defaultdict(int)
-    
-    def __init__(
-            self,
-            logger: Logger = None,
-            name: str = ""
-        ):
 
+    def __init__(self, logger: Logger = None, name: str = ""):
         ## set optional properties
         if name == "":
-            self.name = self.__class__.__name__ + "_" + str(NamedObject.instance_counts[self.__class__.__name__])
-        else: 
+            self.name = (
+                self.__class__.__name__
+                + "_"
+                + str(NamedObject.instance_counts[self.__class__.__name__])
+            )
+        else:
             self.name = name
-    
+
         self.logger = logger
 
         NamedObject.instance_counts[self.__class__.__name__] += 1
 
     ## wrap the logger functions.
-    def ERROR(self, *messages): 
-        if self.logger != None: self.logger.error("{"+self.name+"}", *messages)
+    def ERROR(self, *messages):
+        if self.logger != None:
+            self.logger.error("{" + self.name + "}", *messages)
 
-    def WARN(self, *messages): 
-        if self.logger != None: self.logger.warn("{"+self.name+"}", *messages)
-    
-    def INFO(self, *messages): 
-        if self.logger != None: self.logger.info("{"+self.name+"}", *messages)
-    
-    def DEBUG(self, *messages): 
-        if self.logger != None: self.logger.debug("{"+self.name+"}", *messages)
-    
-    def TRACE(self, *messages): 
-        if self.logger != None: self.logger.trace("{"+self.name+"}", *messages)
+    def WARN(self, *messages):
+        if self.logger != None:
+            self.logger.warn("{" + self.name + "}", *messages)
+
+    def INFO(self, *messages):
+        if self.logger != None:
+            self.logger.info("{" + self.name + "}", *messages)
+
+    def DEBUG(self, *messages):
+        if self.logger != None:
+            self.logger.debug("{" + self.name + "}", *messages)
+
+    def TRACE(self, *messages):
+        if self.logger != None:
+            self.logger.trace("{" + self.name + "}", *messages)
