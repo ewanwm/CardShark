@@ -79,3 +79,27 @@ class CoupPlayer(player.Player):
         for i, card in enumerate(self.Cards):
             retStr += card + ":" + self.CardStates[i][0] + ", "
         retStr += "}"
+
+    def observe(self, colour: str, dead_card_colour: str, reset_colour: str, coin_colour: str, full=False):
+        """Print out the "observation" of this player. i.e. what another player should see when observing this one
+
+        full: whether to print the "full" information about this player. If true then print all cards held by the player.
+        """
+
+        card_string = "["
+        for card, state in zip(self.Cards, self.CardStates):
+            card_name = ""
+            if full:
+                card_name = card
+            else:
+                card_name = "unknown"
+            
+            if state == "Dead":
+                card_string += dead_card_colour + f'{card:>10}' + colour + ", "
+            else:
+                card_string += f'{card_name:>10}' + ", "
+
+        card_string += "] "
+
+        retStr = ":: {col}{name}{col} has {coin_col}{n_coins} coins{col} and cards {cards}{reset}::".format(name=f'{self.name:>15}', n_coins = self.Coins, cards=card_string, col=colour, reset=reset_colour, coin_col=coin_colour)
+        return retStr
