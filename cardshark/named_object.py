@@ -31,21 +31,21 @@ class NamedObject:
 
     ## wrap the logger functions.
     def ERROR(self, *messages):
-        if self.logger != None:
+        if self.logger is not None:
             self.logger.error("{" + self.name + "}", *messages)
 
     def WARN(self, *messages):
-        if self.logger != None:
+        if self.logger is not None:
             self.logger.warn("{" + self.name + "}", *messages)
 
     def INFO(self, *messages):
-        if self.logger != None:
+        if self.logger is not None:
             self.logger.info("{" + self.name + "}", *messages)
 
     def DEBUG(self, *messages):
-        if self.logger != None:
+        if self.logger is not None:
             self.logger.debug("{" + self.name + "}", *messages)
 
     def TRACE(self, *messages):
-        if self.logger != None:
+        if self.logger is not None:
             self.logger.trace("{" + self.name + "}", *messages)

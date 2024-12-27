@@ -60,7 +60,7 @@ def runEpisodeSingleAgent(
 
     step = env.reset()
     agent._set_current_step(step)
-    action = agent.get_action(step, collect=collect, random=random)
+    action = agent.get_action(collect=collect, random=random)
 
     if toVideo:
         ## might need to account for the batch dimension
@@ -78,7 +78,7 @@ def runEpisodeSingleAgent(
         agent._set_current_step(step)
         agent.add_frame()
 
-        action = agent.get_action(step, collect=collect, random=random)
+        action = agent.get_action(collect=collect, random=random)
 
         if train:
             losses.append(agent.train_agent().numpy())

@@ -70,7 +70,7 @@ def runMatchSingleAgent(
             if save_frame:
                 agent.add_frame()
 
-            action = agent.get_action(step, collect=collect, random=random)
+            action = agent.get_action(collect=collect, random=random)
             step = train_env.step(action)
 
             if train:
@@ -152,7 +152,7 @@ def runMatchMultiAgent(
         if save_frame:
             agent.add_frame()
 
-        action = agent.get_action(step, collect=collect, random=random)
+        action = agent.get_action(collect=collect, random=random)
         step = train_env.step(action)
 
         if train:
