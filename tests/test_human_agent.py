@@ -20,7 +20,7 @@ nPlayers = 4
 
 ## Build the environments for training and evaluation
 train_logger = log.Logger(
-    name="Train_env_Logger", logLevel=log.logLevels.kInfo, toFile=False
+    name="Train_env_Logger", log_level=log.LogLevel.INFO, to_file=False
 )
 train_py_env = coup_engine.CoupGame(
     nPlayers=nPlayers, unravelActionSpace=True, logger=train_logger, maxSteps=250
@@ -29,7 +29,7 @@ batched_train_py_env = environments.BatchedPyEnvironment([train_py_env])
 train_env = tf_py_environment.TFPyEnvironment(batched_train_py_env, check_dims=True)
 
 eval_logger = log.Logger(
-    name="Eval_env_Logger", logLevel=log.logLevels.kInfo, toFile=False
+    name="Eval_env_Logger", log_level=log.LogLevel.INFO, to_file=False
 )
 eval_py_env = coup_engine.CoupGame(
     nPlayers=nPlayers, unravelActionSpace=True, logger=eval_logger, maxSteps=250
@@ -152,11 +152,11 @@ def trainMultiAgent(agents, nMatches, plotInterval):
     step = train_env.reset()
 
     for collectMatchIndex in range(5):
-        log.INFO("######## Collect Match {} ##########".format(collectMatchIndex))
+        log.info("######## Collect Match {} ##########".format(collectMatchIndex))
         runMatchMultiAgent(agents, train=False, random=True)
 
     for matchIndex in range(1, nMatches):
-        log.INFO("######## Train Match {} ##########".format(matchIndex))
+        log.info("######## Train Match {} ##########".format(matchIndex))
         runMatchMultiAgent(agents, train=True, collect=True)
 
         if (matchIndex % plotInterval) == 0:
@@ -166,10 +166,10 @@ def trainMultiAgent(agents, nMatches, plotInterval):
 
 
 # train the bots a little bit first
-train_loggerlogLevek = log.logLevels.kSilent  ## sshhhh
+train_loggerlogLevek = log.LogLevel.SILENT  ## sshhhh
 trainMultiAgent(robot_agents, 5, 4)
 
-train_logger.logLevel = log.logLevels.kInfo
+train_logger.log_level = log.LogLevel.INFO
 while True:
     runMatchSingleHuman(human_agent, robot_agents)
 

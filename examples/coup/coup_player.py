@@ -30,7 +30,7 @@ class CoupPlayer(player.Player):
         self.CardStates.append("Alive")
 
     def kill(self):
-        self.INFO("AAARGH, I'm dead!")
+        self.info("AAARGH, I'm dead!")
         self.isAlive = False
         self.giveReward(-30)
 
@@ -71,7 +71,7 @@ class CoupPlayer(player.Player):
 
     def loseInfluence(self, cardIdx):
         ## kill card with index cardIdx
-        self.INFO("Losing influence. Card: ", self.Cards[cardIdx])
+        self.info("Losing influence. Card: ", self.Cards[cardIdx])
         self.cardStates[cardIdx] = "Dead"
 
         self.giveReward(-10)
@@ -89,7 +89,7 @@ class CoupPlayer(player.Player):
         aliveCards = np.where(np.array(self.CardStates) == "Alive")[0]
         cardIdx = np.random.choice(aliveCards)
 
-        self.INFO("Losing influence. Card: ", self.Cards[cardIdx])
+        self.info("Losing influence. Card: ", self.Cards[cardIdx])
         self.CardStates[cardIdx] = "Dead"
 
         self.giveReward(-10)

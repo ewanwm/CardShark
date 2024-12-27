@@ -30,22 +30,22 @@ class NamedObject:
         NamedObject.instance_counts[self.__class__.__name__] += 1
 
     ## wrap the logger functions.
-    def ERROR(self, *messages):
+    def error(self, *messages):
         if self.logger is not None:
             self.logger.error("{" + self.name + "}", *messages)
 
-    def WARN(self, *messages):
+    def warn(self, *messages):
         if self.logger is not None:
             self.logger.warn("{" + self.name + "}", *messages)
 
-    def INFO(self, *messages):
+    def info(self, *messages):
         if self.logger is not None:
             self.logger.info("{" + self.name + "}", *messages)
 
-    def DEBUG(self, *messages):
+    def debug(self, *messages):
         if self.logger is not None:
             self.logger.debug("{" + self.name + "}", *messages)
 
-    def TRACE(self, *messages):
+    def trace(self, *messages):
         if self.logger is not None:
             self.logger.trace("{" + self.name + "}", *messages)

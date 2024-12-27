@@ -119,7 +119,7 @@ def testMultiAgent(init_collect_episodes=20, train_episodes=200, log_interval=10
             "optimizer": keras.optimizers.Adam(learning_rate=1e-3),
             "td_errors_loss_fn": common.element_wise_squared_loss,
         },
-        # logger=Logging.Logger(name = "CartPoleTest_Logger", logLevel = Logging.logLevels.kDebug, toFile = True),
+        # logger=Logging.Logger(name = "CartPoleTest_Logger", log_level = Logging.LogLevel.DEBUG, to_file = True),
     )
 
     ## Make a video of the agents performance pre-training

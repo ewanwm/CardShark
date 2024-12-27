@@ -57,7 +57,7 @@ class Deck:
         If the deck has no more cards in it, will return None.
         """
         if len(self._cards) <= 0:
-            log.ERROR("Trying to draw from a deck with <= 0 cards in it")
+            log.error("Trying to draw from a deck with <= 0 cards in it")
             return None
 
         last_card = self._cards[-1]

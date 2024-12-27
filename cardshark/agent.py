@@ -164,10 +164,10 @@ class MultiAgent(AgentBase):
         self.train_bs = train_batch_size
 
         self._time_step_spec = time_step_spec
-        self.DEBUG("TIME STEP SPEC:", self._time_step_spec)
+        self.debug("TIME STEP SPEC:", self._time_step_spec)
 
         self._action_spec = action_spec
-        self.DEBUG("ACTION SPEC:", self._action_spec)
+        self.debug("ACTION SPEC:", self._action_spec)
 
         ## Set optional values
         if observation_spec is None:
@@ -212,7 +212,7 @@ class MultiAgent(AgentBase):
 
         self._agent.initialize()
 
-        self.DEBUG("DQN agent initialised!")
+        self.debug("DQN agent initialised!")
         self.q_net.summary()
 
         ## Build the replay buffer
@@ -222,8 +222,8 @@ class MultiAgent(AgentBase):
             max_length=max_buffer_length,
         )
 
-        self.DEBUG("Replay buffer initialised:", self._replay_buffer)
-        self.DEBUG("           With data spec:", self._replay_buffer.data_spec)
+        self.debug("Replay buffer initialised:", self._replay_buffer)
+        self.debug("           With data spec:", self._replay_buffer.data_spec)
 
         self.experience_dataset = self._replay_buffer.as_dataset(
             num_parallel_calls=3, sample_batch_size=self.train_bs, num_steps=2 + 1
@@ -296,7 +296,7 @@ class MultiAgent(AgentBase):
         if self._apply_mask:
             # @tfFunction
             def ret_fn(obs_dict):
-                self.TRACE("Observation dict:", obs_dict)
+                self.trace("Observation dict:", obs_dict)
                 return (obs_dict["observations"], obs_dict["mask"])
 
             return ret_fn
@@ -329,7 +329,7 @@ class MultiAgent(AgentBase):
 
         action = policy_step.action
 
-        self.DEBUG("Passing action", action, "to env")
+        self.debug("Passing action", action, "to env")
 
         return action
 
@@ -344,10 +344,10 @@ class MultiAgent(AgentBase):
             and (self.current_step is not None)
             and (self.last_policy_step is not None)
         ):
-            self.DEBUG("Adding Frame")
-            self.DEBUG("  last time step:   ", self.last_step)
-            self.DEBUG("  last action:      ", self.last_policy_step)
-            self.DEBUG("  current time step:", self.current_step)
+            self.debug("Adding Frame")
+            self.debug("  last time step:   ", self.last_step)
+            self.debug("  last action:      ", self.last_policy_step)
+            self.debug("  current time step:", self.current_step)
 
             traj = trajectory.from_transition(
                 time_step=self.last_step,
@@ -355,20 +355,20 @@ class MultiAgent(AgentBase):
                 next_time_step=self.current_step,
             )
 
-            self.DEBUG("  Trajectory:", traj)
+            self.debug("  Trajectory:", traj)
             self._replay_buffer.add_batch(traj)
 
             self._rewards.append(self.current_step.reward.numpy()[0])
 
     @tfFunction
     def _train_agent(self):
-        self.DEBUG("::: Training agent :::", self.name)
+        self.debug("::: Training agent :::", self.name)
 
         # Sample a batch of data from the buffer and update the agent's network.
         experience, _ = next(self.experience_iterator)
-        self.DEBUG("  using experience:", experience)
+        self.debug("  using experience:", experience)
         train_loss = self._agent.train(experience).loss
-        self.DEBUG("  Loss:", train_loss)
+        self.debug("  Loss:", train_loss)
 
         return train_loss
 

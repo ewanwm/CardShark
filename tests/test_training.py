@@ -17,23 +17,23 @@ from cardshark.agent import MultiAgent
 
 from examples.coup import coup_engine, coup_player
 
-log.INFO("TF Version: ", tf.__version__)
+log.info("TF Version: ", tf.__version__)
 
-log.INFO("All modules loaded")
+log.info("All modules loaded")
 
-log.INFO("Physical Devices:\n", tf.config.list_physical_devices(), "\n\n")
+log.info("Physical Devices:\n", tf.config.list_physical_devices(), "\n\n")
 
 nPlayers = 4
 
 ## Build the environments for training and evaluation
-train_logger = None  # log.Logger(name = "Train_env_Logger", logLevel = log.logLevels.kInfo, toFile = True)
+train_logger = None  # log.Logger(name = "Train_env_Logger", log_level = log.LogLevel.INFO, to_file = True)
 train_py_env = coup_engine.CoupGame(
     nPlayers=nPlayers, unravelActionSpace=True, logger=train_logger, maxSteps=250
 )
 batched_train_py_env = environments.BatchedPyEnvironment([train_py_env])
 train_env = tf_py_environment.TFPyEnvironment(batched_train_py_env, check_dims=True)
 
-eval_logger = None  # log.Logger(name = "Eval_env_Logger", logLevel = log.logLevels.kInfo, toFile = True)
+eval_logger = None  # log.Logger(name = "Eval_env_Logger", log_level = log.LogLevel.INFO, to_file = True)
 eval_py_env = coup_engine.CoupGame(
     nPlayers=nPlayers, unravelActionSpace=True, logger=eval_logger, maxSteps=250
 )
@@ -86,11 +86,11 @@ def trainSingleAgent(agent, nMatches, plotInterval):
     step = train_env.reset()
 
     for collectMatchIndex in range(5):
-        log.INFO("######## Collect Match {} ##########".format(collectMatchIndex))
+        log.info("######## Collect Match {} ##########".format(collectMatchIndex))
         runMatchSingleAgent(agent, train=False, random=True)
 
     for matchIndex in range(1, nMatches):
-        log.INFO("######## Train Match {} ##########".format(matchIndex))
+        log.info("######## Train Match {} ##########".format(matchIndex))
         runMatchSingleAgent(agent, train=True, collect=True)
 
         if (matchIndex % plotInterval) == 0:
@@ -163,11 +163,11 @@ def trainMultiAgent(agents, nMatches, plotInterval):
     step = train_env.reset()
 
     for collectMatchIndex in range(5):
-        log.INFO("######## Collect Match {} ##########".format(collectMatchIndex))
+        log.info("######## Collect Match {} ##########".format(collectMatchIndex))
         runMatchMultiAgent(agents, train=False, random=True)
 
     for matchIndex in range(1, nMatches):
-        log.INFO("######## Train Match {} ##########".format(matchIndex))
+        log.info("######## Train Match {} ##########".format(matchIndex))
         runMatchMultiAgent(agents, train=True, collect=True)
 
         if (matchIndex % plotInterval) == 0:

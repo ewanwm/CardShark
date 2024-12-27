@@ -15,4 +15,4 @@ for i, name in enumerate(card_names):
         cardString = name
 ## used for converting card name to id
 cardEnum = Enum("cardEnum", cardString)
-log.DEBUG("cardString:", cardString)
+log.debug("cardString:", cardString)

@@ -70,20 +70,20 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
 
         """
 
-        self.DEBUG("Generating unravelled action space")
+        self.debug("Generating unravelled action space")
         toProduct = []
         for min, max in zip(self._action_spec.minimum, self._action_spec.maximum):
-            self.DEBUG("    MIN:", min, "MAX:", max)
+            self.debug("    MIN:", min, "MAX:", max)
             toProduct.append([i for i in range(min, max)])
 
-        self.DEBUG("  Taking cartesian product of:", toProduct)
+        self.debug("  Taking cartesian product of:", toProduct)
 
         self._unravelled_action_space = np.array(
             [i for i in itertools.product(*toProduct)]
         )
 
-        self.DEBUG("  Unravelled action space:", self._unravelled_action_space)
-        self.DEBUG("  Number of possible actions:", len(self._unravelled_action_space))
+        self.debug("  Unravelled action space:", self._unravelled_action_space)
+        self.debug("  Number of possible actions:", len(self._unravelled_action_space))
 
         self._action_spec = BoundedArraySpec(
             minimum=0,
@@ -131,10 +131,10 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
 
     def _step(self, action: np.ndarray) -> None:
         """Step the game forward one iteration"""
-        self.INFO("")
-        self.INFO("##### Stepping :: Step {} #####".format(self._stepCount))
-        self.DEBUG("gameState:", self.gameState)
-        self.DEBUG("specified actions:", action)
+        self.info("")
+        self.info("##### Stepping :: Step {} #####".format(self._stepCount))
+        self.debug("gameState:", self.gameState)
+        self.debug("specified actions:", action)
 
         ## set default info values for this step
         self._info["reward"] = 0
@@ -143,9 +143,9 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
         ## might need to re-ravel the action
         if self._unravelActionSpace:
             action = self._unravelled_action_space[action]
-            self.DEBUG("unravelled actions:", action)
+            self.debug("unravelled actions:", action)
 
-        self.DEBUG("Active player", self.player_list[self.activePlayer])
+        self.debug("Active player", self.player_list[self.activePlayer])
 
         ## handle the action and move the game to the new state
         self.gameState = self.gameState.handle(action, self)
@@ -167,7 +167,7 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
 
         if not terminated:
             if truncated:
-                self.INFO("::::: Game Truncated :::::")
+                self.info("::::: Game Truncated :::::")
                 step = ts.truncation(
                     reward=reward,
                     discount=1.0,
@@ -190,7 +190,7 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
                 )
 
         else:
-            self.INFO("::::: Game Terminated :::::")
+            self.info("::::: Game Terminated :::::")
             step = ts.termination(
                 reward=reward,
                 observation={
@@ -223,7 +223,7 @@ class RewardState(GameState):
         game.activePlayer = (game.activePlayer + 1) % game.nPlayers
 
         if game.activePlayer == 0:
-            game.INFO("========= DONE HANDING OUT REWARDS ==========")
+            game.info("========= DONE HANDING OUT REWARDS ==========")
             return TerminatedState
 
         return RewardState

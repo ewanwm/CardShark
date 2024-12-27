@@ -16,13 +16,13 @@ class Player(NamedObject, ABC):
     def giveReward(self, reward: float) -> None:
         """Give reward to this player for a job well done"""
 
-        self.DEBUG("Giving reward:", reward)
+        self.debug("Giving reward:", reward)
         self.rewardAccum += reward
-        self.DEBUG("  Reward after:", self.rewardAccum)
+        self.debug("  Reward after:", self.rewardAccum)
 
     def claimReward(self) -> float:
         """Get the total reward given to this player until now and set it's reward back to 0"""
-        self.DEBUG("Claiming reward:", self.rewardAccum)
+        self.debug("Claiming reward:", self.rewardAccum)
         ret = self.rewardAccum
         self.rewardAccum = 0.0
         return ret
