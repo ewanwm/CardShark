@@ -28,8 +28,6 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
         self.nPlayers = nPlayers
 
         NamedObject.__init__(self, **kwargs)
-        
-        DEBUG("Initialising Game:", self.name, ", with", nPlayers, "players")
 
     ## for returning general info about the environment, not things necessarily needed by agents as observations
     def get_info(self) -> typing.Dict:
@@ -55,16 +53,27 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
         """
         return self._action_spec
 
+    def flatten_action(self, action_ndim):
+        """Take an N dimensional action array and find which 1d action index it corresponds to
+        """
+
+        # could definitely be smarter about this but I'm lazy... :/
+        for i in range(self._unravelled_action_space.shape[0]):
+            if np.all(self._unravelled_action_space[i] == action_ndim):
+                return np.array([i])
+
+        raise ValueError("Seems that the specified action ain't in the action space bud")
+
     def _unravel_action_space(self):
         """Unravel the action space of the environment 
 
         e.g. if the current action spec is an N by M multidimensional array of actions,
         this fn will transform the space into a one dimensional one of size M x N.
         The structure of the initial higher dimensional space will be stored in the 
-        _unravelledActionSpace attribute. To get from the 1D action space back to the 
+        _unravelled_action_space attribute. To get from the 1D action space back to the 
         original space you can do::
 
-            action = self._unravelledActionSpace[1DactionID]
+            action = self._unravelled_action_space[1DactionID]
 
         """
 
@@ -76,12 +85,12 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
 
         self.DEBUG("  Taking cartesian product of:", toProduct)
 
-        self._unravelledActionSpace = np.array([i for i in itertools.product(*toProduct)])
+        self._unravelled_action_space = np.array([i for i in itertools.product(*toProduct)])
 
-        self.DEBUG("  Unravelled action space:", self._unravelledActionSpace)
-        self.DEBUG("  Number of possible actions:", len(self._unravelledActionSpace))
+        self.DEBUG("  Unravelled action space:", self._unravelled_action_space)
+        self.DEBUG("  Number of possible actions:", len(self._unravelled_action_space))
 
-        self._action_spec = BoundedArraySpec(minimum = 0, maximum = len(self._unravelledActionSpace) - 1, shape=(), dtype=np.int32)
+        self._action_spec = BoundedArraySpec(minimum = 0, maximum = len(self._unravelled_action_space) - 1, shape=(), dtype=np.int32)
 
         return
     
@@ -115,7 +124,7 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
         return False
 
     @abstractmethod
-    def getMask(self, playerIdx: int) -> np.array:
+    def get_mask(self, playerIdx: int) -> np.array:
         pass
     
     @abstractmethod
@@ -128,7 +137,7 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
         """
         self.INFO("")
         self.INFO("##### Stepping :: Step {} #####".format(self._stepCount))
-        self.INFO("gameState:", self.gameState)
+        self.DEBUG("gameState:", self.gameState)
         self.DEBUG("specified actions:", action)
 
         ## set default info values for this step
@@ -137,10 +146,10 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
  
         ## might need to re-ravel the action
         if self._unravelActionSpace:
-            action = self._unravelledActionSpace[action]
+            action = self._unravelled_action_space[action]
             self.DEBUG("unravelled actions:", action)
 
-        self.DEBUG("Active player", self.playerList[self.activePlayer])
+        self.DEBUG("Active player", self.player_list[self.activePlayer])
 
         ## handle the action and move the game to the new state
         self.gameState = self.gameState.handle(action, self)
@@ -155,7 +164,7 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
         truncated = self._stepCount > self._maxSteps
 
         ## set this so that on the outside, we know which player we should give the reward to 
-        reward = self.playerList[self.activePlayer].claimReward()
+        reward = self.player_list[self.activePlayer].claimReward()
 
         self._info["winner"] = self._winner
         self._info["reward"] = reward
@@ -165,7 +174,7 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
                 self.INFO("::::: Game Truncated :::::")
                 step = ts.truncation(reward = reward, discount = 1.0, 
                         observation ={"observation": self.getObservation(self.activePlayer),
-                                        "mask": self.getMask(self.activePlayer),
+                                        "mask": self.get_mask(self.activePlayer),
                                         "activePlayer": self.activePlayer
                                         }
                         )
@@ -173,7 +182,7 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
             else:
                 step = ts.transition(reward = reward, discount = 1.0, 
                         observation ={"observation": self.getObservation(self.activePlayer),
-                                        "mask": self.getMask(self.activePlayer),
+                                        "mask": self.get_mask(self.activePlayer),
                                         "activePlayer": self.activePlayer
                                         }
                         )
@@ -182,7 +191,7 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
             self.INFO("::::: Game Terminated :::::")
             step = ts.termination(reward = reward,
                     observation ={"observation": self.getObservation(self.activePlayer),
-                                    "mask": self.getMask(self.activePlayer),
+                                    "mask": self.get_mask(self.activePlayer),
                                     "activePlayer": self.activePlayer
                                     }
                     )
