@@ -166,10 +166,10 @@ def trainMultiAgent(agents, nMatches, plotInterval):
 
 
 # train the bots a little bit first
-train_loggerlogLevek = log.LogLevel.SILENT  ## sshhhh
+train_logger.set_log_level(log.LogLevel.SILENT)  ## sshhhh
 trainMultiAgent(robot_agents, 5, 4)
 
-train_logger.log_level = log.LogLevel.INFO
+train_logger.set_log_level(log.LogLevel.INFO)
 while True:
     runMatchSingleHuman(human_agent, robot_agents)
 

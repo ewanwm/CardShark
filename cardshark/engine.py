@@ -1,17 +1,17 @@
-# other cardshark stuff
-from cardshark.logging import *
-from cardshark.named_object import NamedObject
+# Python stuff
+import itertools
+import typing
+import numpy as np
+from abc import ABC, abstractmethod
 
 # TF agents stuff
 from tf_agents.specs import BoundedArraySpec
 from tf_agents.environments import py_environment
 from tf_agents.trajectories import time_step as ts
 
-# Python stuff
-import itertools
-import typing
-import numpy as np
-from abc import ABC, abstractmethod
+# other cardshark stuff
+from cardshark.logging import *
+from cardshark.named_object import NamedObject
 
 
 class Game(py_environment.PyEnvironment, NamedObject, ABC):
@@ -160,7 +160,7 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
         truncated = self._stepCount > self._maxSteps
 
         ## set this so that on the outside, we know which player we should give the reward to
-        reward = self.player_list[self.activePlayer].claimReward()
+        reward = self.player_list[self.activePlayer].claim_reward()
 
         self._info["winner"] = self._winner
         self._info["reward"] = reward
@@ -236,3 +236,64 @@ class TerminatedState(GameState):
         raise Exception(
             "handle() should never actually get called for TerminatedState. Something has gone wrong!!"
         )
+
+
+class Player(NamedObject, ABC):
+    """The base class representing a player in a Game to be implemented by the user
+
+    You should use the give_reward() method within your Game object to reward the player 
+    (and thus the Agent that is embodying that Player) which will inform the reinforcement
+    learning process when Agents are trying to learn to play your game.
+    """
+    
+    def __init__(self, **kwargs):
+        NamedObject.__init__(self, **kwargs)
+
+        self._reward_accum = 0.0
+
+        self.reset()
+
+    @abstractmethod
+    def reset(self):
+        """Reset this player back to "factory settings" 
+
+        Should be implemented by the user and should reset all the stuff you've 
+        done in the course of running a game. This will typically be called 
+        when instantiating and when resetting a Game object. Also called in the 
+        __init__() method of Player.
+        """
+        pass
+
+    def give_reward(self, reward: float) -> None:
+        """Give reward to this player for a job well done
+        """
+
+        self.debug("Giving reward:", reward)
+        self._reward_accum += reward
+        self.debug("  Reward after:", self._reward_accum)
+
+    def claim_reward(self) -> float:
+        """Get the total reward given to this player until now and set it's reward back to 0
+        """
+        self.debug("Claiming reward:", self._reward_accum)
+        ret = self._reward_accum
+        self._reward_accum = 0.0
+        return ret
+
+    def check_reward(self) -> float:
+        """Check the reward that this player has accumulated but without resetting it to 0
+        """
+        return self._reward_accum
+
+    def get_info_str(self) -> str:
+        """Can overwrite this to provide a string that gives information about this Player
+        
+        This will then be used in some debug printouts and can give some help when trying 
+        to debug user code.
+        """
+        return ""
+
+    def __str__(self) -> str:
+        ret_str = "Name: " + self.name + "\n" + self.get_info_str()
+
+        return ret_str

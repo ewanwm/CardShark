@@ -1,8 +1,8 @@
-from cardshark import player
+from cardshark import engine
 import numpy as np
 
 
-class CoupPlayer(player.Player):
+class CoupPlayer(engine.Player):
     def __init__(self, nCards, **kwargs):
         self.nCards = nCards
 
@@ -13,7 +13,7 @@ class CoupPlayer(player.Player):
         self.Cards = []
         self.CardStates = []
         self.isAlive = True
-        self.rewardAccum = 0
+        self._reward_accum = 0
 
     def giveCard(self, card_name):
         if len(self.Cards) >= self.nCards:
@@ -32,7 +32,7 @@ class CoupPlayer(player.Player):
     def kill(self):
         self.info("AAARGH, I'm dead!")
         self.isAlive = False
-        self.giveReward(-30)
+        self.give_reward(-30)
 
     def takeCard(self, card_name):
         for i in range(self.nCards):
@@ -74,7 +74,7 @@ class CoupPlayer(player.Player):
         self.info("Losing influence. Card: ", self.Cards[cardIdx])
         self.cardStates[cardIdx] = "Dead"
 
-        self.giveReward(-10)
+        self.give_reward(-10)
 
     def loseInfluence(self):
         ## kill one of the players cards at random
@@ -92,7 +92,7 @@ class CoupPlayer(player.Player):
         self.info("Losing influence. Card: ", self.Cards[cardIdx])
         self.CardStates[cardIdx] = "Dead"
 
-        self.giveReward(-10)
+        self.give_reward(-10)
 
     def info_string(self):
         retStr = "N Coins: " + str(self.Coins) + ", "

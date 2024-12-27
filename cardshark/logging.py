@@ -108,6 +108,18 @@ class Logger:
         else:
             print(indent_str + self._format(message_type), *messages)
 
+    def set_log_level(self, level: LogLevel) -> None:
+        """Set the log_level of this Logger
+        """
+
+        self._log_level = level
+
+    def get_log_level(self) -> LogLevel:
+        """Get the log_level of this Logger
+        """
+
+        return self._log_level
+
     def error(self, *messages):
         """Log an error message to this logger
 

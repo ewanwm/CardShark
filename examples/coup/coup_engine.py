@@ -276,7 +276,7 @@ class CoupGame(engine.Game):
         self.info("  - Player: " + player.name + " performed action: Income (+1 coin)")
         player.giveCoins(1)
 
-        player.giveReward(1)
+        player.give_reward(1)
 
     def _ForeignAid(self, p):
         player = self.player_list[p]
@@ -285,7 +285,7 @@ class CoupGame(engine.Game):
         )
         player.giveCoins(2)
 
-        player.giveReward(2)
+        player.give_reward(2)
 
     def _Coup(self, p1, p2):
         player1, player2 = self.player_list[p1], self.player_list[p2]
@@ -298,13 +298,13 @@ class CoupGame(engine.Game):
         player1.takeCoins(actions["Coup"]["cost"])
         player2.loseInfluence()
 
-        player1.giveReward(10)
+        player1.give_reward(10)
 
     def _Tax(self, p):
         player = self.player_list[p]
         self.info("  - Player: " + player.name + " performed action: Tax (+3 coins)")
         player.giveCoins(3)
-        player.giveReward(3)
+        player.give_reward(3)
 
     def _Steal(self, p1, p2):
         player1, player2 = self.player_list[p1], self.player_list[p2]
@@ -325,8 +325,8 @@ class CoupGame(engine.Game):
         player2.takeCoins(coinsToSteal)
         player1.giveCoins(coinsToSteal)
 
-        player2.giveReward(-coinsToSteal)
-        player1.giveReward(coinsToSteal)
+        player2.give_reward(-coinsToSteal)
+        player1.give_reward(coinsToSteal)
 
     def _Assasinate(self, p1, p2):
         player1, player2 = self.player_list[p1], self.player_list[p2]
@@ -339,7 +339,7 @@ class CoupGame(engine.Game):
         player1.takeCoins(3)
         player2.loseInfluence()
 
-        player1.giveReward(10)
+        player1.give_reward(10)
 
     def _Exchange():
         raise Exception("ERROR: Exchange() not implemented yet")
@@ -391,7 +391,7 @@ class CoupGame(engine.Game):
                     self.info("")
                     self.info("  ** Player " + player.name + " Wins! **")
                     self._winner = playerIdx
-                    player.giveReward(50)
+                    player.give_reward(50)
 
                     return True
 
@@ -899,8 +899,8 @@ class ChallengeBlockState(engine.GameState):
                 "to block their action,",
                 game.attemptedAction,
             )
-            game.player_list[game.currentPlayer_action].giveReward(-3)
-            game.player_list[game.currentPlayer_block].giveReward(3)
+            game.player_list[game.currentPlayer_action].give_reward(-3)
+            game.player_list[game.currentPlayer_block].give_reward(3)
 
         game.currentPlayer_action = (game.currentPlayer_action + 1) % game.nPlayers
         game.activePlayer = game.currentPlayer_action
