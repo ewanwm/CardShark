@@ -95,12 +95,13 @@ debug("action_string:", action_string)
 class CoupGame(engine.Game):
     def __init__(
         self,
-        nPlayers: int,
-        unravelActionSpace: bool = False,
-        maxSteps: int = np.inf,
+        n_players: int,
+        unravel_action_space: bool = False,
+        max_steps: int = np.inf,
         **kwargs,
     ):
-        engine.Game.__init__(self, nPlayers, unravelActionSpace, maxSteps, **kwargs)
+        
+        engine.Game.__init__(self, n_players, unravel_action_space, max_steps, **kwargs)
 
         ## make the action space spec
         ## 1st variable is which action to take in the "action" phase of the game
@@ -115,7 +116,7 @@ class CoupGame(engine.Game):
         actionSpecMin_NP[:] = 0
         actionSpecMax_NP = np.ndarray((5))
         actionSpecMax_NP[0] = len(actions.keys())
-        actionSpecMax_NP[1] = self.nPlayers
+        actionSpecMax_NP[1] = self.n_players
         actionSpecMax_NP[2] = 2
         actionSpecMax_NP[3] = 2
         actionSpecMax_NP[4] = 2
@@ -128,17 +129,17 @@ class CoupGame(engine.Game):
             dtype=np.int32,
         )  ##gym.spaces.MultiDiscrete(actionSpecNP)
 
-        self._unravelActionSpace = unravelActionSpace
-        if unravelActionSpace:
-            self._unravel_action_space()
+        self._unravel_action_space = unravel_action_space
+        if unravel_action_space:
+            self._do_unravel_action_space()
 
         ## make array defining the observation spec
         ## this is the cards, and number of coins for each player
         observationSpecMax_NP = np.ndarray(
-            (self.nPlayers, 1 + MAX_CARDS), dtype=np.float32
+            (self.n_players, 1 + MAX_CARDS), dtype=np.float32
         )
         observationSpecMin_NP = np.ndarray(
-            (self.nPlayers, 1 + MAX_CARDS), dtype=np.float32
+            (self.n_players, 1 + MAX_CARDS), dtype=np.float32
         )
         observationSpecMin_NP[:] = 0.0
         observationSpecMax_NP[:, 0] = (
@@ -168,7 +169,7 @@ class CoupGame(engine.Game):
             ),
             "activePlayer": BoundedArraySpec(
                 minimum=0,
-                maximum=self.nPlayers,
+                maximum=self.n_players,
                 shape=(),
                 dtype=np.int32,
                 name="activePlayer",
@@ -179,9 +180,9 @@ class CoupGame(engine.Game):
         ## TODO: Add an observation for which action is currently being attempted and by who
 
         ## initialise the players
+        ## TODO: Move this to Game initialiser. Need to have some register_player_class() method or smth
         self.trace("  Creating players")
-        self.player_list = []
-        for _ in range(nPlayers):
+        for _ in range(n_players):
             self.player_list.append(
                 coup_player.CoupPlayer(nCards=MAX_CARDS, logger=self.logger)
             )
@@ -190,7 +191,6 @@ class CoupGame(engine.Game):
         self.trace("  Creating deck")
         self.Deck = Deck(coup_cards.cards)
 
-        self._maxSteps = maxSteps
         self._reset()
 
     def action_array_to_string(self, action: np.array) -> str:
@@ -204,7 +204,7 @@ class CoupGame(engine.Game):
 
         actionStr = action_names[action[0]]
 
-        if action[1] == self.nPlayers - 1:
+        if action[1] == self.n_players - 1:
             targetStr = "None"
         else:
             targetStr = action[1]
@@ -245,16 +245,16 @@ class CoupGame(engine.Game):
             self.debug("  ", player)
 
         ## set initial game state
-        self.gameState = ActionState
+        self._game_state = ActionState
         self.attemptedAction = "NOT_SET"
         self.currentPlayer_action = 0
-        self.activePlayer = 0
+        self._active_player = 0
         self.action_target = 999
         self.currentPlayer_block = 999
         self.currentPlayer_challenge = 999
         self._winner = -999
 
-        self._stepCount = 0
+        self._step_count = 0
         self._info = {}
 
         self._info["reward"] = 0
@@ -262,9 +262,9 @@ class CoupGame(engine.Game):
 
         return ts.restart(
             observation={
-                "observation": self.getObservation(self.activePlayer),
-                "mask": self.get_mask(self.activePlayer),
-                "activePlayer": self.activePlayer,
+                "observation": self.get_observation(self._active_player),
+                "mask": self.get_mask(self._active_player),
+                "activePlayer": self._active_player,
             }
         )
 
@@ -362,7 +362,7 @@ class CoupGame(engine.Game):
         else:
             fn(self.currentPlayer_action)
 
-    def _checkStatus(self):
+    def _check_status(self):
         ## check the status of all the of all players
         ## for each one, check if all their cards are dead, if so, kill that player
         ## if all but one player is dead, they win and we're done
@@ -406,12 +406,12 @@ class CoupGame(engine.Game):
         ## 5th variable is whether or not to challenge the attempted block
         maskList = []
         maskList.append(np.ndarray((len(actions.keys())), dtype=np.int8))
-        maskList.append(np.ndarray((self.nPlayers,), dtype=np.int8))
+        maskList.append(np.ndarray((self.n_players,), dtype=np.int8))
         maskList.append(np.ndarray((2,), dtype=np.int8))
         maskList.append(np.ndarray((2,), dtype=np.int8))
         maskList.append(np.ndarray((2,), dtype=np.int8))
 
-        if self.gameState == ActionState:
+        if self._game_state == ActionState:
             if self.player_list[playerIdx].Coins < 10:  ##10:
                 ## if player has >= 10 they can only perform a coup
                 ## and their only choice is which player to target
@@ -437,42 +437,42 @@ class CoupGame(engine.Game):
                 maskList[0][actionEnum["Coup"].value - 1] = 1
 
             ## can only target players that are alive
-            for id in range(1, self.nPlayers):
-                if self.player_list[(id + playerIdx) % self.nPlayers].isAlive:
+            for id in range(1, self.n_players):
+                if self.player_list[(id + playerIdx) % self.n_players].isAlive:
                     maskList[1][id - 1] = 1
                 else:
                     maskList[1][id - 1] = 0
 
             maskList[0][actionEnum["None"].value - 1] = 0  ## don't allow no action
-            maskList[1][self.nPlayers - 1] = 0  ## don't allow no target
+            maskList[1][self.n_players - 1] = 0  ## don't allow no target
 
         else:
             maskList[0][:] = 0
             maskList[1][:] = 0
 
             maskList[0][actionEnum["None"].value - 1] = 1  ## allow no action
-            maskList[1][self.nPlayers - 1] = 1  ## allow no target
+            maskList[1][self.n_players - 1] = 1  ## allow no target
 
         maskList[2][0] = 1
-        if self.gameState in [BlockingGeneralState, BlockingTargetState]:
+        if self._game_state in [BlockingGeneralState, BlockingTargetState]:
             maskList[2][1] = 1
         else:
             maskList[2][1] = 0
 
         maskList[3][0] = 1
-        if self.gameState in [ChallengeGeneralState, ChallengeTargetState]:
+        if self._game_state in [ChallengeGeneralState, ChallengeTargetState]:
             maskList[3][1] = 1
         else:
             maskList[3][1] = 0
 
         maskList[4][0] = 1
-        if self.gameState == ChallengeBlockState:
+        if self._game_state == ChallengeBlockState:
             maskList[4][1] = 1
         else:
             maskList[4][1] = 0
 
         ## If in final reward state, player cant do anything
-        if self.gameState == engine.RewardState:
+        if self._game_state == engine.RewardState:
             for i in range(len(maskList)):
                 maskList[i][:] = 0
 
@@ -496,7 +496,7 @@ class CoupGame(engine.Game):
 
         maskList = self.get_mask_ndim(playerIdx)
 
-        if self._unravelActionSpace:
+        if self._unravel_action_space:
             self.debug("Unravelling mask")
             unravelledMaskList = []
 
@@ -515,7 +515,7 @@ class CoupGame(engine.Game):
 
         return mask
 
-    def getObservation(self, playerIdx: int) -> np.ndarray:
+    def get_observation(self, playerIdx: int) -> np.ndarray:
         self.debug(
             "Getting observation for player",
             self.player_list[playerIdx].name,
@@ -523,7 +523,7 @@ class CoupGame(engine.Game):
             playerIdx,
         )
         ## get observarion for player at index playerIdx in this games player list
-        observation = np.ndarray((self.nPlayers, 1 + MAX_CARDS), dtype=np.float32)
+        observation = np.ndarray((self.n_players, 1 + MAX_CARDS), dtype=np.float32)
 
         ## first fill in the observation for this player, always the first row in the observation
         ## so that any player will always see itself at the first position
@@ -536,8 +536,8 @@ class CoupGame(engine.Game):
             ].value
 
         ## for the rest of the observation we fill up the equivalent for other players
-        for otherPlayerCounter in range(1, self.nPlayers):
-            otherPlayerIdx = (playerIdx + otherPlayerCounter) % self.nPlayers
+        for otherPlayerCounter in range(1, self.n_players):
+            otherPlayerIdx = (playerIdx + otherPlayerCounter) % self.n_players
             self.trace(
                 "adding info from player",
                 self.player_list[otherPlayerIdx].name,
@@ -606,8 +606,8 @@ class ActionState(engine.GameState):
                 "is dead! skipping their action",
             )
             game._info["skippingTurn"] = True
-            game.currentPlayer_action = (game.currentPlayer_action + 1) % game.nPlayers
-            game.activePlayer = game.currentPlayer_action
+            game.currentPlayer_action = (game.currentPlayer_action + 1) % game.n_players
+            game._active_player = game.currentPlayer_action
 
             return ActionState
 
@@ -627,7 +627,7 @@ class ActionState(engine.GameState):
             if actions[game.attemptedAction]["targeted"]:
                 game.action_target = (
                     game.currentPlayer_action + 1 + action[1]
-                ) % game.nPlayers
+                ) % game.n_players
                 game.info(
                     "Targetting player",
                     game.player_list[game.action_target].name,
@@ -660,28 +660,28 @@ class ActionState(engine.GameState):
             if blockable:
                 if targetted:
                     game.currentPlayer_block = game.action_target
-                    game.activePlayer = game.currentPlayer_block
+                    game._active_player = game.currentPlayer_block
 
                     return BlockingTargetState
                 else:
                     game.currentPlayer_block = (
                         game.currentPlayer_action + 1
-                    ) % game.nPlayers
-                    game.activePlayer = game.currentPlayer_block
+                    ) % game.n_players
+                    game._active_player = game.currentPlayer_block
 
                     return BlockingGeneralState
 
             elif challengable:
                 if targetted:
                     game.currentPlayer_challenge = game.action_target
-                    game.activePlayer = game.currentPlayer_challenge
+                    game._active_player = game.currentPlayer_challenge
                     return ChallengeTargetState
 
                 else:
                     game.currentPlayer_challenge = (
                         game.currentPlayer_action + 1
-                    ) % game.nPlayers
-                    game.activePlayer = game.currentPlayer_challenge
+                    ) % game.n_players
+                    game._active_player = game.currentPlayer_challenge
 
                     return ChallengeGeneralState
 
@@ -689,8 +689,8 @@ class ActionState(engine.GameState):
                 game.performAttemptedAction()
                 game.currentPlayer_action = (
                     game.currentPlayer_action + 1
-                ) % game.nPlayers
-                game.activePlayer = game.currentPlayer_action
+                ) % game.n_players
+                game._active_player = game.currentPlayer_action
 
                 return ActionState
 
@@ -703,8 +703,8 @@ class BlockingGeneralState(engine.GameState):
                 "is dead so they can't really block anything",
             )
             game._info["skippingTurn"] = True
-            game.currentPlayer_block = (game.currentPlayer_block + 1) % game.nPlayers
-            game.activePlayer = game.currentPlayer_block
+            game.currentPlayer_block = (game.currentPlayer_block + 1) % game.n_players
+            game._active_player = game.currentPlayer_block
 
             return BlockingGeneralState
 
@@ -715,8 +715,8 @@ class BlockingGeneralState(engine.GameState):
                 game.performAttemptedAction()
                 game.currentPlayer_action = (
                     game.currentPlayer_action + 1
-                ) % game.nPlayers
-                game.activePlayer = game.currentPlayer_action
+                ) % game.n_players
+                game._active_player = game.currentPlayer_action
 
                 return ActionState
 
@@ -728,7 +728,7 @@ class BlockingGeneralState(engine.GameState):
                         "is attempting to block current action,",
                         game.attemptedAction,
                     )
-                    game.activePlayer = game.currentPlayer_action
+                    game._active_player = game.currentPlayer_action
                     return ChallengeBlockState
 
                 elif action[2] == 0:
@@ -741,8 +741,8 @@ class BlockingGeneralState(engine.GameState):
                     )
                     game.currentPlayer_block = (
                         game.currentPlayer_block + 1
-                    ) % game.nPlayers
-                    game.activePlayer = game.currentPlayer_block
+                    ) % game.n_players
+                    game._active_player = game.currentPlayer_block
 
                     return BlockingGeneralState
 
@@ -756,7 +756,7 @@ class BlockingTargetState(engine.GameState):
                 "is attempting to block current action,",
                 game.attemptedAction,
             )
-            game.activePlayer = game.currentPlayer_action
+            game._active_player = game.currentPlayer_action
 
             return ChallengeBlockState
 
@@ -766,8 +766,8 @@ class BlockingTargetState(engine.GameState):
                 game.player_list[game.currentPlayer_block].name,
             )
             game.performAttemptedAction()
-            game.currentPlayer_action = (game.currentPlayer_action + 1) % game.nPlayers
-            game.activePlayer = game.currentPlayer_action
+            game.currentPlayer_action = (game.currentPlayer_action + 1) % game.n_players
+            game._active_player = game.currentPlayer_action
 
             return ActionState
 
@@ -782,8 +782,8 @@ class ChallengeGeneralState(engine.GameState):
             game._info["skippingTurn"] = True
             game.currentPlayer_challenge = (
                 game.currentPlayer_challenge + 1
-            ) % game.nPlayers
-            game.activePlayer = game.currentPlayer_challenge
+            ) % game.n_players
+            game._active_player = game.currentPlayer_challenge
 
             return ChallengeGeneralState
 
@@ -794,8 +794,8 @@ class ChallengeGeneralState(engine.GameState):
                 game.performAttemptedAction()
                 game.currentPlayer_action = (
                     game.currentPlayer_action + 1
-                ) % game.nPlayers
-                game.activePlayer = game.currentPlayer_action
+                ) % game.n_players
+                game._active_player = game.currentPlayer_action
 
                 return ActionState
 
@@ -822,8 +822,8 @@ class ChallengeGeneralState(engine.GameState):
                     ## If a challenge happened, it will be resolved straight away so we move back to the action state
                     game.currentPlayer_action = (
                         game.currentPlayer_action + 1
-                    ) % game.nPlayers
-                    game.activePlayer = game.currentPlayer_action
+                    ) % game.n_players
+                    game._active_player = game.currentPlayer_action
 
                     return ActionState
 
@@ -836,8 +836,8 @@ class ChallengeGeneralState(engine.GameState):
                     ## we dont change state, just move to the next player and let them block if they want
                     game.currentPlayer_challenge = (
                         game.currentPlayer_challenge + 1
-                    ) % game.nPlayers
-                    game.activePlayer = game.currentPlayer_challenge
+                    ) % game.n_players
+                    game._active_player = game.currentPlayer_challenge
 
                     return ChallengeGeneralState
 
@@ -868,8 +868,8 @@ class ChallengeTargetState(engine.GameState):
             )
             game.performAttemptedAction()
 
-        game.currentPlayer_action = (game.currentPlayer_action + 1) % game.nPlayers
-        game.activePlayer = game.currentPlayer_action
+        game.currentPlayer_action = (game.currentPlayer_action + 1) % game.n_players
+        game._active_player = game.currentPlayer_action
 
         return ActionState
 
@@ -902,8 +902,8 @@ class ChallengeBlockState(engine.GameState):
             game.player_list[game.currentPlayer_action].give_reward(-3)
             game.player_list[game.currentPlayer_block].give_reward(3)
 
-        game.currentPlayer_action = (game.currentPlayer_action + 1) % game.nPlayers
-        game.activePlayer = game.currentPlayer_action
+        game.currentPlayer_action = (game.currentPlayer_action + 1) % game.n_players
+        game._active_player = game.currentPlayer_action
 
         return ActionState
 

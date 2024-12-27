@@ -16,14 +16,14 @@ from cardshark.agent import MultiAgent
 
 from examples.coup import coup_engine, coup_agent
 
-nPlayers = 4
+n_players = 4
 
 ## Build the environments for training and evaluation
 train_logger = log.Logger(
-    name="Train_env_Logger", log_level=log.LogLevel.INFO, to_file=False
+    name="Train_env_Logger", log_level=log.LogLevel.INFO, to_file=True
 )
 train_py_env = coup_engine.CoupGame(
-    nPlayers=nPlayers, unravelActionSpace=True, logger=train_logger, maxSteps=250
+    n_players=n_players, unravel_action_space=True, logger=train_logger, max_steps=250
 )
 batched_train_py_env = environments.BatchedPyEnvironment([train_py_env])
 train_env = tf_py_environment.TFPyEnvironment(batched_train_py_env, check_dims=True)
@@ -32,7 +32,7 @@ eval_logger = log.Logger(
     name="Eval_env_Logger", log_level=log.LogLevel.INFO, to_file=False
 )
 eval_py_env = coup_engine.CoupGame(
-    nPlayers=nPlayers, unravelActionSpace=True, logger=eval_logger, maxSteps=250
+    n_players=n_players, unravel_action_space=True, logger=eval_logger, max_steps=250
 )
 batched_eval_py_env = environments.BatchedPyEnvironment([eval_py_env])
 eval_env = tf_py_environment.TFPyEnvironment(batched_eval_py_env, check_dims=True)
@@ -86,7 +86,7 @@ def runMatchMultiAgent(
     """run a match and train agent"""
     ## TODO: add random collection policy to the MultiAgent that can be used to randomly sample environment
 
-    assert len(agents) == nPlayers
+    assert len(agents) == n_players
 
     step = train_env.reset()
 
@@ -121,7 +121,7 @@ train_py_env.player_list[0].name = human_agent.name
 
 ## generate some random colours for the bots
 bot_colours = []
-for i in range(nPlayers - 1):
+for i in range(n_players - 1):
     bot_colours.append("\u001b[38;5;{}m".format(random.randint(21, 230)))
     train_py_env.player_list[1 + i].name = (
         bot_colours[i] + "bot_" + str(i) + coup_agent.RESET
@@ -129,7 +129,7 @@ for i in range(nPlayers - 1):
 
 ## Load up some (possibly pre-trained) bots to play against the human
 robot_agents = []
-for i in range(nPlayers):
+for i in range(n_players):
     robot_agents.append(
         MultiAgent(
             train_env.time_step_spec(),
@@ -166,7 +166,7 @@ def trainMultiAgent(agents, nMatches, plotInterval):
 
 
 # train the bots a little bit first
-train_logger.set_log_level(log.LogLevel.SILENT)  ## sshhhh
+train_logger.set_log_level(log.LogLevel.WARNING)  ## sshhhh
 trainMultiAgent(robot_agents, 5, 4)
 
 train_logger.set_log_level(log.LogLevel.INFO)

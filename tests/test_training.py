@@ -23,19 +23,19 @@ log.info("All modules loaded")
 
 log.info("Physical Devices:\n", tf.config.list_physical_devices(), "\n\n")
 
-nPlayers = 4
+n_players = 4
 
 ## Build the environments for training and evaluation
 train_logger = None  # log.Logger(name = "Train_env_Logger", log_level = log.LogLevel.INFO, to_file = True)
 train_py_env = coup_engine.CoupGame(
-    nPlayers=nPlayers, unravelActionSpace=True, logger=train_logger, maxSteps=250
+    n_players=n_players, unravel_action_space=True, logger=train_logger, max_steps=250
 )
 batched_train_py_env = environments.BatchedPyEnvironment([train_py_env])
 train_env = tf_py_environment.TFPyEnvironment(batched_train_py_env, check_dims=True)
 
 eval_logger = None  # log.Logger(name = "Eval_env_Logger", log_level = log.LogLevel.INFO, to_file = True)
 eval_py_env = coup_engine.CoupGame(
-    nPlayers=nPlayers, unravelActionSpace=True, logger=eval_logger, maxSteps=250
+    n_players=n_players, unravel_action_space=True, logger=eval_logger, max_steps=250
 )
 batched_eval_py_env = environments.BatchedPyEnvironment([eval_py_env])
 eval_env = tf_py_environment.TFPyEnvironment(batched_eval_py_env, check_dims=True)
@@ -132,7 +132,7 @@ def runMatchMultiAgent(
     """run a match and train agent"""
     ## TODO: add random collection policy to the MultiAgent that can be used to randomly sample environment
 
-    assert len(agents) == nPlayers
+    assert len(agents) == n_players
 
     step = train_env.reset()
 
@@ -177,7 +177,7 @@ def trainMultiAgent(agents, nMatches, plotInterval):
 
 ## Train a single agent among random agents
 agent_list = []
-for i in range(nPlayers):
+for i in range(n_players):
     agent_list.append(
         MultiAgent(
             train_env.time_step_spec(),

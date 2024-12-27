@@ -62,10 +62,10 @@ class CoupHumanAgent(HumanAgent):
         elif dim == 1:
             print("Choose another player to target: ")
             names = []
-            for id in range(1, self._game.nPlayers):
+            for id in range(1, self._game.n_players):
                 names.append(
                     self._game.player_list[
-                        (id + self._player_id) % self._game.nPlayers
+                        (id + self._player_id) % self._game.n_players
                     ].name
                 )
         elif dim == 2:
@@ -121,7 +121,7 @@ class CoupHumanAgent(HumanAgent):
             ## trying to learn extra stuff when they don't need to
             if dim == 1:
                 if not self._game.is_targetted_action(coup_engine.action_names[ret[0]]):
-                    ret[1] = self._game.nPlayers - 1
+                    ret[1] = self._game.n_players - 1
                     continue
 
             self._print_options(dim, mask_nd)
