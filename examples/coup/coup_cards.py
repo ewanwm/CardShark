@@ -6,9 +6,9 @@ from cardshark import logging as log
 cards = {"Duke": 4, "Captain": 4, "Assassin": 4, "Contessa": 4, "Inquisitor": 4}
 
 ## used for converting card id to name
-cardNames = list(cards.keys())
+card_names = list(cards.keys())
 cardString = ""
-for i, name in enumerate(cardNames):
+for i, name in enumerate(card_names):
     if i != 0:
         cardString = cardString + " " + name
     else:

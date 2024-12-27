@@ -15,7 +15,7 @@ class CoupPlayer(player.Player):
         self.isAlive = True
         self.rewardAccum = 0
 
-    def giveCard(self, cardName):
+    def giveCard(self, card_name):
         if len(self.Cards) >= self.nCards:
             raise Exception(
                 "ERROR: trying to give player "
@@ -26,7 +26,7 @@ class CoupPlayer(player.Player):
                 + str(self.nCards)
             )
 
-        self.Cards.append(cardName)
+        self.Cards.append(card_name)
         self.CardStates.append("Alive")
 
     def kill(self):
@@ -34,24 +34,24 @@ class CoupPlayer(player.Player):
         self.isAlive = False
         self.giveReward(-30)
 
-    def takeCard(self, cardName):
+    def takeCard(self, card_name):
         for i in range(self.nCards):
-            if (self.CardStates[i] == "Alive") & (self.Cards[i] == cardName):
+            if (self.CardStates[i] == "Alive") & (self.Cards[i] == card_name):
                 self.Cards.pop(i)
                 self.CardStates.pop(i)
                 return
 
         raise Exception(
             "ERROR: trying to take card",
-            cardName,
+            card_name,
             "away from player",
             self.name,
             "but they do not have one that is alive",
         )
 
-    def checkCard(self, cardName):
+    def checkCard(self, card_name):
         for i in range(self.nCards):
-            if (self.CardStates[i] == "Alive") & (self.Cards[i] == cardName):
+            if (self.CardStates[i] == "Alive") & (self.Cards[i] == card_name):
                 return True
 
     def giveCoins(self, nCoins):
