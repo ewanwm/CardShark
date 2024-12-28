@@ -1,202 +1,296 @@
-# other cardshark stuff
-from cardshark import cards
-from cardshark.logging import *
-from cardshark.player import Player
-from cardshark.named_object import NamedObject
+"""This module contains the objects used to describe games
+
+CardShark uses a state pattern to model games. To implement a new 
+game you will need to implement a game class derived from Game which
+describes the overall state of the game. 
+
+The actual gameplay is handled by State objects. Each part of 
+your game should be modelled using classes that derive from State.
+They should implement the State.handle() method to take in an action
+and advance the state of your Game. They should then return another
+(or the same) state object which tells the engine what the next 
+state will be.
+
+The Player class represents a player within your game. You should
+implement your own player classes derived from this for your specific
+purposes.
+
+A very simple example could be ... TODO: write this
+"""
+
+# Python stuff
+import itertools
+import typing
+from abc import ABC, abstractmethod
+import numpy as np
 
 # TF agents stuff
 from tf_agents.specs import BoundedArraySpec
 from tf_agents.environments import py_environment
 from tf_agents.trajectories import time_step as ts
 
-# Python stuff
-import itertools
-import typing
-import numpy as np
-from abc import ABC, abstractmethod
-from enum import Enum
+# other cardshark stuff
+from cardshark.named_object import NamedObject
+
 
 class Game(py_environment.PyEnvironment, NamedObject, ABC):
-    def __init__(
-            self, 
-            nPlayers: int, 
-            unravelActionSpace: bool, 
-            maxSteps: int,
-            **kwargs
-        ):
+    """Base class for user defined Games
 
-        self.nPlayers = nPlayers
+    This should describe the state of the game. You'll need to implement 
+    the following methods for your game:
+
+        - _reset()
+        - check_status()
+        - get_mask()
+        - get_observation()
+    """
+
+    def __init__(
+        self, n_players: int, unravel_action_space: bool, max_steps: int, **kwargs
+    ):
+        self.n_players = n_players
+        self._unravel_action_space = unravel_action_space
+        self._max_steps = max_steps
+
+        self._active_player = None
+        self._game_state = None
+        self._action_spec = None
+        self._action_spec = None
+        self._unravelled_action_space = None
+        self._winner = None
+        self._observation_spec = None
+        self._step_count = 0
+        self._info = {}
+
+        self.player_list = []
 
         NamedObject.__init__(self, **kwargs)
+        py_environment.PyEnvironment.__init__(self)
 
-    ## for returning general info about the environment, not things necessarily needed by agents as observations
+    @abstractmethod
+    def _reset(self):
+        """Reset the Game back to "factory settings"
+        
+        Will get called when starting a new game, and in the
+        Game initialiser. You should reset any instance variables that
+        you use in describing your game environment here.
+        """
+
+    @abstractmethod
+    def _check_status(self) -> bool:
+        """Check the current status of the Game
+        
+        This should return True when your game is totally finished
+        and False otherwise
+        """
+
+    @abstractmethod
+    def get_mask(self, player_id: int) -> np.array:
+        """Get a mask representing the allowed actions
+        
+        Array should have the same shape as the action array. 0 represents
+        a disallowed action and 1 an allowed action.
+        """
+
+    @abstractmethod
+    def get_observation(self, player_id: int) -> np.ndarray:
+        """Get the observation representing the current state of the game
+        
+        This will be passed to the reinforcement learning agents and
+        allow them to assess the current situation and decide what 
+        action to take. The format of the observation should fit with what 
+        was previously defined for this Game.
+        """
+
+
+    ## for returning general info about the environment, not things necessarily
+    ## needed by agents as observations.
+    ## TODO: This should be automated. should construct the _info dict from info
+    ## set by the user, should add helper fns like set_winner(), skip_turn()...
+    ## TODO: Add a give_reward() to Game that keeps track of the reward issued
+    ## this turn so it can be added to the _info and user doesn't have to
+    ## set this manually
     def get_info(self) -> typing.Dict:
         """Get information about the state of the game
 
-        This info 
+        This info
         """
 
         return self._info
 
     def observation_spec(self) -> typing.Dict[str, BoundedArraySpec]:
-        """Get the observation specification for the environment associated with this Game object
+        """Get the observation specification for the environment associated with this Game
 
         This is a dictionary with entries:
-            - "observations": the ArraySpec describing the observations returned by the environment.
+            - "observations": the ArraySpec describing the observations returned by 
+            the environment.
             - "mask":         the ArraySpec describing the mask returned by the environment.
-            - "activePlayer": ArraySpec describing the part of the observation that tells which player is active
+            - "activePlayer": ArraySpec describing the part of the observation that 
+            tells which player is active
         """
         return self._observation_spec
-    
+
     def action_spec(self) -> BoundedArraySpec:
-        """Get the action specification for the environment associated with this Game object
-        """
+        """Get the action specification for the environment associated with this Game object"""
         return self._action_spec
 
     def flatten_action(self, action_ndim):
-        """Take an N dimensional action array and find which 1d action index it corresponds to
-        """
+        """Take an N dimensional action array and find which 1d action index it corresponds to"""
 
         # could definitely be smarter about this but I'm lazy... :/
         for i in range(self._unravelled_action_space.shape[0]):
             if np.all(self._unravelled_action_space[i] == action_ndim):
                 return np.array([i])
 
-        raise ValueError("Seems that the specified action ain't in the action space bud")
+        raise ValueError(
+            "Seems that the specified action ain't in the action space bud"
+        )
 
-    def _unravel_action_space(self):
-        """Unravel the action space of the environment 
+    def get_active_player(self) -> int:
+        """Get the index of the currently active player
+        """
+        return self._active_player
+
+    def set_active_player(self, player_id: int) -> None:
+        """Set the currently active player using their index
+        """
+        if player_id > len(self.player_list):
+            raise ValueError("Index too high! There aren't that many players!")
+        if player_id < 0:
+            raise ValueError("Negative index! What is a negative player?!?!")
+
+        self._active_player = player_id
+
+    def _do_unravel_action_space(self):
+        """Unravel the action space of the environment
 
         e.g. if the current action spec is an N by M multidimensional array of actions,
         this fn will transform the space into a one dimensional one of size M x N.
-        The structure of the initial higher dimensional space will be stored in the 
-        _unravelled_action_space attribute. To get from the 1D action space back to the 
+        The structure of the initial higher dimensional space will be stored in the
+        _unravelled_action_space attribute. To get from the 1D action space back to the
         original space you can do::
 
             action = self._unravelled_action_space[1DactionID]
 
         """
 
-        self.DEBUG("Generating unravelled action space")
-        toProduct = []
-        for min, max in zip(self._action_spec.minimum, self._action_spec.maximum):
-            self.DEBUG("    MIN:", min, "MAX:", max)
-            toProduct.append([i for i in range(min, max)])
+        self.debug("Generating unravelled action space")
+        to_product = []
+        for min_val, max_val in zip(self._action_spec.minimum, self._action_spec.maximum):
+            self.debug("    MIN:", min_val, "MAX:", max_val)
+            to_product.append(list(range(min_val, max_val)))
 
-        self.DEBUG("  Taking cartesian product of:", toProduct)
+        self.debug("  Taking cartesian product of:", to_product)
 
-        self._unravelled_action_space = np.array([i for i in itertools.product(*toProduct)])
+        self._unravelled_action_space = np.array(
+            list(itertools.product(*to_product))
+        )
 
-        self.DEBUG("  Unravelled action space:", self._unravelled_action_space)
-        self.DEBUG("  Number of possible actions:", len(self._unravelled_action_space))
+        self.debug("  Unravelled action space:", self._unravelled_action_space)
+        self.debug("  Number of possible actions:", len(self._unravelled_action_space))
 
-        self._action_spec = BoundedArraySpec(minimum = 0, maximum = len(self._unravelled_action_space) - 1, shape=(), dtype=np.int32)
+        self._action_spec = BoundedArraySpec(
+            minimum=0,
+            maximum=len(self._unravelled_action_space) - 1,
+            shape=(),
+            dtype=np.int32,
+        )
 
-        return
-    
-    @abstractmethod
-    def _reset():
-        pass
-
-    def getActivePlayer(self) -> int:
-        """Get the ID of the currently active player
-        """
-        return int(self.activePlayer)
-    
-    @abstractmethod
-    def _checkStatus(self) -> bool:
-        pass
-    
-    def checkStatus(self) -> bool:
+    def check_status(self) -> bool:
+        """Check the current status of the game. If finished move to reward state
         
-        if self.gameState == RewardState:
+        Checks the current state of the game using the user implemented 
+        _check_status() method. If it returns True then move to the reward
+        state and return true. If game is already in the reward state, stay there
+        and return True. Otherwise do nothing and return False.
+        """
+
+        if self._game_state == RewardState:
             ## if we've already checked and are finished we can just return here
-            return True 
+            return True
 
         # do the user supplied status check
         # if game is over, reset the active player to 0 and move to reward state
-        if self._checkStatus():
-            self.gameState = RewardState
-            self.activePlayer = 0
+        if self._check_status():
+            self._game_state = RewardState
+            self._active_player = 0
 
             return True
 
         return False
 
-    @abstractmethod
-    def get_mask(self, playerIdx: int) -> np.array:
-        pass
-    
-    @abstractmethod
-    def getObservation(self, playerIdx: int) -> np.ndarray:
-        pass
-
     def _step(self, action: np.ndarray) -> None:
-        """Step the game forward one iteration
-
-        """
-        self.INFO("")
-        self.INFO("##### Stepping :: Step {} #####".format(self._stepCount))
-        self.DEBUG("gameState:", self.gameState)
-        self.DEBUG("specified actions:", action)
+        """Step the game forward one iteration"""
+        self.info("")
+        self.info("##### Stepping :: Step {} #####".format(self._step_count))
+        self.debug("gameState:", self._game_state)
+        self.debug("specified actions:", action)
 
         ## set default info values for this step
         self._info["reward"] = 0
         self._info["skippingTurn"] = False
- 
-        ## might need to re-ravel the action
-        if self._unravelActionSpace:
-            action = self._unravelled_action_space[action]
-            self.DEBUG("unravelled actions:", action)
 
-        self.DEBUG("Active player", self.player_list[self.activePlayer])
+        ## might need to re-ravel the action
+        if self._unravel_action_space:
+            action = self._unravelled_action_space[action]
+            self.debug("unravelled actions:", action)
+
+        self.debug("Active player", self.player_list[self._active_player])
 
         ## handle the action and move the game to the new state
-        self.gameState = self.gameState.handle(action, self)
-        assert issubclass(self.gameState, GameState)
-        
-        terminated = self.gameState == TerminatedState
-        if not terminated:
-            if self.checkStatus():
-                self.gameState = RewardState
-        
-        ## if the number of steps has gone above maximum, we'll truncate the game here
-        truncated = self._stepCount > self._maxSteps
+        self._game_state = self._game_state.handle(action, self)
+        assert issubclass(self._game_state, GameState)
 
-        ## set this so that on the outside, we know which player we should give the reward to 
-        reward = self.player_list[self.activePlayer].claimReward()
+        terminated = self._game_state == TerminatedState
+        if not terminated:
+            if self.check_status():
+                self._game_state = RewardState
+
+        ## if the number of steps has gone above maximum, we'll truncate the game here
+        truncated = self._step_count > self._max_steps
+
+        ## set this so that on the outside, we know which player we should give the reward to
+        reward = self.player_list[self._active_player].claim_reward()
 
         self._info["winner"] = self._winner
         self._info["reward"] = reward
-        
-        if not terminated: 
-            if truncated:
-                self.INFO("::::: Game Truncated :::::")
-                step = ts.truncation(reward = reward, discount = 1.0, 
-                        observation ={"observation": self.getObservation(self.activePlayer),
-                                        "mask": self.get_mask(self.activePlayer),
-                                        "activePlayer": self.activePlayer
-                                        }
-                        )
-                
-            else:
-                step = ts.transition(reward = reward, discount = 1.0, 
-                        observation ={"observation": self.getObservation(self.activePlayer),
-                                        "mask": self.get_mask(self.activePlayer),
-                                        "activePlayer": self.activePlayer
-                                        }
-                        )
-            
-        else: 
-            self.INFO("::::: Game Terminated :::::")
-            step = ts.termination(reward = reward,
-                    observation ={"observation": self.getObservation(self.activePlayer),
-                                    "mask": self.get_mask(self.activePlayer),
-                                    "activePlayer": self.activePlayer
-                                    }
-                    )
 
-        self._stepCount += 1
+        if not terminated:
+            if truncated:
+                self.info("::::: Game Truncated :::::")
+                step = ts.truncation(
+                    reward=reward,
+                    discount=1.0,
+                    observation={
+                        "observation": self.get_observation(self._active_player),
+                        "mask": self.get_mask(self._active_player),
+                        "activePlayer": self._active_player,
+                    },
+                )
+
+            else:
+                step = ts.transition(
+                    reward=reward,
+                    discount=1.0,
+                    observation={
+                        "observation": self.get_observation(self._active_player),
+                        "mask": self.get_mask(self._active_player),
+                        "activePlayer": self._active_player,
+                    },
+                )
+
+        else:
+            self.info("::::: Game Terminated :::::")
+            step = ts.termination(
+                reward=reward,
+                observation={
+                    "observation": self.get_observation(self._active_player),
+                    "mask": self.get_mask(self._active_player),
+                    "activePlayer": self._active_player,
+                },
+            )
+
+        self._step_count += 1
         return step
 
 
@@ -204,29 +298,115 @@ class GameState(ABC):
     """Abstract base class representing a game state
 
     Users should derive states from this object when implementing a game.
-    Will need to implement a handle() method which should perform actions specified by a player.
+    Will need to implement a handle() method which should perform actions 
+    specified by a player.
     """
 
+    @staticmethod
     @abstractmethod
     def handle(action: np.ndarray, game: Game):
-        """ abstract method to step within the state, should advance the state of the Game object based on the provided action array. """
+        """Handle the action
+        
+        should advance the state of the Game object based 
+        on the provided action array.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def name() -> str:
+        """The name of this state, use for logging"""
 
 class RewardState(GameState):
-    """Special game state which occurs at the end of play in which final rewards are handed out to players
+    """Special game state which occurs at the end of play 
+    
+    Go through all players and hand out final rewards.
     """
-    
+
+    @staticmethod
     def handle(action: np.ndarray, game: Game) -> GameState:
-        game.activePlayer = (game.activePlayer + 1) % game.nPlayers
-    
-        if game.activePlayer == 0:
-            game.INFO("========= DONE HANDING OUT REWARDS ==========")
+        game.set_active_player((game.get_active_player() + 1) % game.n_players)
+
+        if game.get_active_player() == 0:
+            game.info("========= DONE HANDING OUT REWARDS ==========")
             return TerminatedState
-        
+
         return RewardState
 
+    @staticmethod
+    def name() -> str:
+        return "Reward"
+
+
 class TerminatedState(GameState):
-    """Special game state used to indicate that the game has been terminated
+    """Special game state used to indicate that the game has been terminated"""
+
+    @staticmethod
+    def handle(action: np.ndarray, game: Game) -> GameState:
+        raise NotImplementedError(
+            "handle() should never actually get called for TerminatedState. "
+            "Something has gone wrong!!"
+        )
+
+    @staticmethod
+    def name() -> str:
+        return "Terminated"
+
+
+class Player(NamedObject, ABC):
+    """The base class representing a player in a Game to be implemented by the user
+
+    You should use the give_reward() method within your Game object to reward the player 
+    (and thus the Agent that is embodying that Player) which will inform the reinforcement
+    learning process when Agents are trying to learn to play your game.
     """
 
-    def handle(action: np.ndarray, game: Game) -> GameState:
-        raise Exception("handle() should never actually get called for TerminatedState. Something has gone wrong!!")
+    def __init__(self, **kwargs):
+        NamedObject.__init__(self, **kwargs)
+
+        self._reward_accum = 0.0
+
+        self.reset()
+
+    @abstractmethod
+    def reset(self):
+        """Reset this player back to "factory settings" 
+
+        Should be implemented by the user and should reset all the stuff you've 
+        done in the course of running a game. This will typically be called 
+        when instantiating and when resetting a Game object. Also called in the 
+        __init__() method of Player.
+        """
+
+    def give_reward(self, reward: float) -> None:
+        """Give reward to this player for a job well done
+        """
+
+        self.debug("Giving reward:", reward)
+        self._reward_accum += reward
+        self.debug("  Reward after:", self._reward_accum)
+
+    def claim_reward(self) -> float:
+        """Get the total reward given to this player until now and set it's reward back to 0
+        """
+        self.debug("Claiming reward:", self._reward_accum)
+        ret = self._reward_accum
+        self._reward_accum = 0.0
+        return ret
+
+    def check_reward(self) -> float:
+        """Check the reward that this player has accumulated but without resetting it to 0
+        """
+        return self._reward_accum
+
+    def get_info_str(self) -> str:
+        """Can overwrite this to provide a string that gives information about this Player
+        
+        This will then be used in some debug printouts and can give some help when trying 
+        to debug user code.
+        """
+        return ""
+
+    def __str__(self) -> str:
+        ret_str = "Name: " + self.name + "\n" + self.get_info_str()
+
+        return ret_str
