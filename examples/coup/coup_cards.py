@@ -1,3 +1,6 @@
+"""Describe the cards used in Coup game
+"""
+
 from enum import Enum
 from cardshark import logging as log
 
@@ -6,13 +9,14 @@ from cardshark import logging as log
 cards = {"Duke": 4, "Captain": 4, "Assassin": 4, "Contessa": 4, "Inquisitor": 4}
 
 ## used for converting card id to name
-card_names = list(cards.keys())
-cardString = ""
-for i, name in enumerate(card_names):
+CARD_NAMES = list(cards.keys())
+CARD_STRING = ""
+for i, name in enumerate(CARD_NAMES):
     if i != 0:
-        cardString = cardString + " " + name
+        CARD_STRING = CARD_STRING + " " + name
     else:
-        cardString = name
+        CARD_STRING = name
+
 ## used for converting card name to id
-cardEnum = Enum("cardEnum", cardString)
-log.debug("cardString:", cardString)
+CardEnum = Enum("CardEnum", CARD_STRING)
+log.debug("CARD_STRING:", CARD_STRING)

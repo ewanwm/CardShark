@@ -20,7 +20,7 @@ n_players = 4
 
 ## Build the environments for training and evaluation
 train_logger = log.Logger(
-    name="Train_env_Logger", log_level=log.LogLevel.INFO, to_file=True
+    name="Train_env_Logger", log_level=log.LogLevel.INFO, to_file=False
 )
 train_py_env = coup_engine.CoupGame(
     n_players=n_players, unravel_action_space=True, logger=train_logger, max_steps=250
@@ -74,7 +74,7 @@ def runMatchSingleHuman(
             if train:
                 agent.train_agent()
 
-        if train_py_env.player_list[0].isAlive:
+        if train_py_env.player_list[0].is_alive:
             time.sleep(3)
         else:
             time.sleep(0.25)

@@ -1,9 +1,15 @@
-from cardshark.agent import HumanAgent
-from cardshark import logging as log
+"""Define Agent for Coup game
 
+Currently just a pretty simple command line interface.
+"""
+
+# Python stuff
+import numpy as np
+
+# CardShark stuff
+from cardshark.agent import HumanAgent
 from examples.coup import coup_engine
 
-import numpy as np
 
 GRAY = "\u001b[30;1m"
 RED = "\u001b[31;1m"
@@ -15,6 +21,9 @@ RESET = "\u001b[0m"
 
 
 class CoupHumanAgent(HumanAgent):
+    """Human UI for Coup game
+    """
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -58,14 +67,14 @@ class CoupHumanAgent(HumanAgent):
         ## set what to print depending on which action dimension was specified
         if dim == 0:
             print("Choose an action: ")
-            names = coup_engine.action_names
+            names = coup_engine.ACTION_NAMES
         elif dim == 1:
             print("Choose another player to target: ")
             names = []
-            for id in range(1, self._game.n_players):
+            for other_id in range(1, self._game.n_players):
                 names.append(
                     self._game.player_list[
-                        (id + self._player_id) % self._game.n_players
+                        (other_id + self._player_id) % self._game.n_players
                     ].name
                 )
         elif dim == 2:
@@ -92,15 +101,14 @@ class CoupHumanAgent(HumanAgent):
             )
 
     def _get_action(self):
-        ## 1st variable is which action to take in the "action" phase of the game
+        ## 1st variable is which action to take in the action phase of the game
         ## 2nd variable is which other player to target if applicable
-        ## 3rd variable is whether or not to attempt to block current attemted action in the "blocking" phase
-        ## 4th variable is whether or not to challenge the acting player in the "challenge" phase
-        ## 5th variable is whether or not to challenge the attempted block
+        ## 3rd variable is whether to try to block current attemted action in blocking phase
+        ## 4th variable is whether to challenge the acting player in the challenge phase
+        ## 5th variable is whether to challenge the attempted block
 
         self._print_observations()
 
-        mask_1d = self._game.get_mask(self._player_id)
         mask_nd = self._game.get_mask_ndim(self._player_id)
 
         ret = np.zeros(5, dtype=int)
@@ -120,7 +128,7 @@ class CoupHumanAgent(HumanAgent):
             ## when action is not targetted. This way ML agents will not need to worry about
             ## trying to learn extra stuff when they don't need to
             if dim == 1:
-                if not self._game.is_targetted_action(coup_engine.action_names[ret[0]]):
+                if not self._game.is_targetted_action(coup_engine.ACTION_NAMES[ret[0]]):
                     ret[1] = self._game.n_players - 1
                     continue
 
@@ -138,11 +146,11 @@ class CoupHumanAgent(HumanAgent):
 
                 inp_int = int(inp)
 
-                if inp_int > len(mask_nd[dim]):
+                if inp_int >= len(mask_nd[dim]):
                     valid = False
                     message = "Value out of range"
 
-                if mask_nd[dim][inp_int] == 0:
+                elif mask_nd[dim][inp_int] == 0:
                     valid = False
                     message = "Option not allowed"
 

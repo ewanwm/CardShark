@@ -1,47 +1,72 @@
-from cardshark import engine
+"""Define the Player object for use in the Coup game"""
+
+# Python stuff
 import numpy as np
+
+# CardShark stuff
+from cardshark import engine
 
 
 class CoupPlayer(engine.Player):
-    def __init__(self, nCards, **kwargs):
-        self.nCards = nCards
+    """Player class for the Coup game"""
+
+    def __init__(self, n_cards, **kwargs):
+        self.n_cards = n_cards
+        self.coins = None
+        self.is_alive = None
 
         super().__init__(**kwargs)
 
     def reset(self):
-        self.Coins = 2  ## start with 2 coins
-        self.Cards = []
-        self.CardStates = []
-        self.isAlive = True
+        """Reset the player"""
+
+        self.coins = 2  ## start with 2 coins
+        self.cards = []
+        self.card_states = []
+        self.is_alive = True
         self._reward_accum = 0
 
-    def giveCard(self, card_name):
-        if len(self.Cards) >= self.nCards:
-            raise Exception(
+    def give_card(self, card_name):
+        """Give a card to this player
+
+        Will raise an exception if adding the card would take the number
+        of cards the player has over the specified limit
+        """
+
+        if len(self.cards) >= self.n_cards:
+            raise ValueError(
                 "ERROR: trying to give player "
                 + self.name
                 + " a card when they already have "
-                + len(self.Cards)
+                + len(self.cards)
                 + " cards. Max num of cards is set to "
-                + str(self.nCards)
+                + str(self.n_cards)
             )
 
-        self.Cards.append(card_name)
-        self.CardStates.append("Alive")
+        self.cards.append(card_name)
+        self.card_states.append("Alive")
 
     def kill(self):
+        """Kill the player"""
+
         self.info("AAARGH, I'm dead!")
-        self.isAlive = False
+        self.is_alive = False
         self.give_reward(-30)
 
-    def takeCard(self, card_name):
-        for i in range(self.nCards):
-            if (self.CardStates[i] == "Alive") & (self.Cards[i] == card_name):
-                self.Cards.pop(i)
-                self.CardStates.pop(i)
+    def take_card(self, card_name):
+        """Take a particular card away from this player
+
+        Will check if the player actually has the specified card and
+        it is alive and raise an exception if not.
+        """
+
+        for i in range(self.n_cards):
+            if (self.card_states[i] == "Alive") & (self.cards[i] == card_name):
+                self.cards.pop(i)
+                self.card_states.pop(i)
                 return
 
-        raise Exception(
+        raise RuntimeError(
             "ERROR: trying to take card",
             card_name,
             "away from player",
@@ -49,58 +74,69 @@ class CoupPlayer(engine.Player):
             "but they do not have one that is alive",
         )
 
-    def checkCard(self, card_name):
-        for i in range(self.nCards):
-            if (self.CardStates[i] == "Alive") & (self.Cards[i] == card_name):
+    def check_card(self, card_name) -> bool:
+        """Check if the player has a particular card
+
+        return true if they have the card and it is alive or false otherwise
+        """
+
+        for i in range(self.n_cards):
+            if (self.card_states[i] == "Alive") & (self.cards[i] == card_name):
                 return True
 
-    def giveCoins(self, nCoins):
-        self.Coins += nCoins
+        return False
 
-    def takeCoins(self, nCoins):
-        if self.Coins - nCoins < 0:
-            raise Exception(
+    def give_coins(self, n_coins):
+        """Give the player some coins"""
+
+        self.coins += n_coins
+
+    def take_coins(self, n_coins):
+        """Take some coins away from the player
+
+        Will raise an exception if trying to take away more coins than
+        the player has
+        """
+
+        if self.coins - n_coins < 0:
+            raise ValueError(
                 "ERROR: trying to take "
-                + str(nCoins)
+                + str(n_coins)
                 + " from player "
                 + self.name
                 + " Who only has "
-                + str(self.Coins)
+                + str(self.coins)
             )
-        self.Coins = self.Coins - nCoins
+        self.coins = self.coins - n_coins
 
-    def loseInfluence(self, cardIdx):
-        ## kill card with index cardIdx
-        self.info("Losing influence. Card: ", self.Cards[cardIdx])
-        self.cardStates[cardIdx] = "Dead"
+    def lose_influence(self):
+        """Kill one of the players cards at random"""
 
-        self.give_reward(-10)
-
-    def loseInfluence(self):
-        ## kill one of the players cards at random
-        if np.all(np.array(self.CardStates) == "Dead"):
-            raise Exception(
+        if np.all(np.array(self.card_states) == "Dead"):
+            raise RuntimeError(
                 "ERROR: trying to make",
                 self.name,
                 "lose influence but all their cards are already dead: ",
-                self.__str__(),
+                self,
             )
 
-        aliveCards = np.where(np.array(self.CardStates) == "Alive")[0]
-        cardIdx = np.random.choice(aliveCards)
+        alive_cards = np.where(np.array(self.card_states) == "Alive")[0]
+        card_idx = np.random.choice(alive_cards)
 
-        self.info("Losing influence. Card: ", self.Cards[cardIdx])
-        self.CardStates[cardIdx] = "Dead"
+        self.info("Losing influence. Card: ", self.cards[card_idx])
+        self.card_states[card_idx] = "Dead"
 
         self.give_reward(-10)
 
     def info_string(self):
-        retStr = "N Coins: " + str(self.Coins) + ", "
-        retStr += "N Cards: " + str(len(self.Cards)) + ", "
-        retStr += "Cards: {"
-        for i, card in enumerate(self.Cards):
-            retStr += card + ":" + self.CardStates[i][0] + ", "
-        retStr += "}"
+        """Get information string for debugging"""
+
+        ret_str = "N coins: " + str(self.coins) + ", "
+        ret_str += "N cards: " + str(len(self.cards)) + ", "
+        ret_str += "cards: {"
+        for i, card in enumerate(self.cards):
+            ret_str += card + ":" + self.card_states[i][0] + ", "
+        ret_str += "}"
 
     def observe(
         self,
@@ -110,13 +146,15 @@ class CoupPlayer(engine.Player):
         coin_colour: str,
         full=False,
     ):
-        """Print out the "observation" of this player. i.e. what another player should see when observing this one
-
-        full: whether to print the "full" information about this player. If true then print all cards held by the player.
+        """Get the "observation" of this player
+        
+        i.e. what another player should see when observing this one.
+        full: whether to print the "full" information about this player. 
+            If true then print all cards held by the player.
         """
 
         card_string = "["
-        for card, state in zip(self.Cards, self.CardStates):
+        for card, state in zip(self.cards, self.card_states):
             card_name = ""
             if full:
                 card_name = card
@@ -130,12 +168,12 @@ class CoupPlayer(engine.Player):
 
         card_string += "] "
 
-        retStr = ":: {col}{name}{col} has {coin_col}{n_coins} coins{col} and cards {cards}{reset}::".format(
+        ret_str = ":: {col}{name}{col} has {coin_col}{n_coins} coins{col} and cards {cards}{reset}::".format(
             name=f"{self.name:>15}",
-            n_coins=self.Coins,
+            n_coins=self.coins,
             cards=card_string,
             col=colour,
             reset=reset_colour,
             coin_col=coin_colour,
         )
-        return retStr
+        return ret_str
