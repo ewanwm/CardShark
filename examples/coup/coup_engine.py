@@ -1,4 +1,12 @@
 """Derived engine classes to run Coup game
+
+TODO: known Issues:
+    - when blocking and challenging, players can be asked to block own action
+    - sometimes when an action is challenged and the challenge fails, the action
+      doesn't get performed
+    - can't block assassination attempts, only challenge. Will need to implement
+      BlockOrChallenge state and appropriate masking 
+    - need to implement examine and exchange actions
 """
 
 # python stuff
