@@ -179,7 +179,7 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
     This should describe the state of the game. You'll need to implement 
     the following methods for your game:
 
-        - _reset()
+        - reset_game()
         - check_status()
         - get_mask()
         - get_observation()
@@ -206,7 +206,7 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
         py_environment.PyEnvironment.__init__(self)
 
     @abstractmethod
-    def _reset(self):
+    def reset_game(self):
         """Reset the Game back to "factory settings"
         
         Will get called when starting a new game, and in the
@@ -239,6 +239,23 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
         action to take. The format of the observation should fit with what 
         was previously defined for this Game.
         """
+
+    def _reset(self):
+        """Reset all players, call the user defined reset_game() and get the reset timestep"""
+
+        ## set individual pieces back to initial state
+        for player in self.player_list:
+            player.reset()
+
+        self.reset_game()
+
+        return ts.restart(
+            observation={
+                "observation": self.get_observation(self.get_active_player()),
+                "mask": self.get_mask(self.get_active_player()),
+                "activePlayer": self.get_active_player(),
+            }
+        )
 
     def set_action_spec(self, spec: typing.Dict[str, typing.Tuple[int]]) -> None:
         """Use this to describe the possible actions for agents playing your game

@@ -13,11 +13,6 @@ TODO: known Issues:
 from enum import Enum
 import numpy as np
 
-# TF stuff
-# TODO: abstract all tf_agents out into Game base class. User shouldn't have to touch it
-from tf_agents.specs import BoundedArraySpec
-from tf_agents.trajectories import time_step as ts
-
 # cardshark engine stuff
 from cardshark import engine
 from cardshark.cards import Deck
@@ -173,8 +168,6 @@ class CoupGame(engine.Game):
         self.trace("  Creating deck")
         self.deck = Deck(coup_cards.cards)
 
-        self._reset()
-
     def action_array_to_string(self, action: np.array) -> str:
         """Convert action array to a human readable string
 
@@ -204,11 +197,8 @@ class CoupGame(engine.Game):
             challenge_block=challenge_block_str,
         )
 
-    def _reset(self):
+    def reset_game(self):
         self.debug("Resetting game")
-        ## set individual pieces back to initial state
-        for player in self.player_list:
-            player.reset()
 
         self.deck.reset()
         self.debug("Un shuffled deck:", self.deck)
@@ -241,13 +231,6 @@ class CoupGame(engine.Game):
         self._info["reward"] = 0
         self._info["skippingTurn"] = False
 
-        return ts.restart(
-            observation={
-                "observation": self.get_observation(self.get_active_player()),
-                "mask": self.get_mask(self.get_active_player()),
-                "activePlayer": self.get_active_player(),
-            }
-        )
 
     ############################################################################################
     #### These are the functions that actually perform the actions specified by the players ####
