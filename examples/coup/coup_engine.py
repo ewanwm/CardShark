@@ -13,11 +13,6 @@ TODO: known Issues:
 from enum import Enum
 import numpy as np
 
-# TF stuff
-# TODO: abstract all tf_agents out into Game base class. User shouldn't have to touch it
-from tf_agents.specs import BoundedArraySpec
-from tf_agents.trajectories import time_step as ts
-
 # cardshark engine stuff
 from cardshark import engine
 from cardshark.cards import Deck
@@ -32,7 +27,7 @@ MAX_CARDS = 2
 
 ## possible actions players can take
 ##         Action | Card Needed | Blocked by | Cost | isTargeted
-actions = {
+ACTIONS = {
     "None": {
         "needs": "", 
         "blockedBy": [""], 
@@ -91,7 +86,7 @@ actions = {
 
 
 ## used for converting action id to name
-ACTION_NAMES = list(actions.keys())
+ACTION_NAMES = list(ACTIONS.keys())
 ACTION_STRING = ""
 for action_id, name in enumerate(ACTION_NAMES):
     if action_id != 0:
@@ -127,26 +122,15 @@ class CoupGame(engine.Game):
         ###   so that situations where either block or challenge are valid can be
         ###   dealt with more easily in situations where only one is valid,
         ###   can easily just mask out the other one.
-        action_spec_min = np.ndarray((5))
-        action_spec_min[:] = 0
-        action_spec_max = np.ndarray((5))
-        action_spec_max[0] = len(actions.keys())
-        action_spec_max[1] = self.n_players
-        action_spec_max[2] = 2
-        action_spec_max[3] = 2
-        action_spec_max[4] = 2
+        action_spec = {
+            "action": [0, len(ACTIONS.keys())],
+            "target": [0, self.n_players],
+            "block" : [0, 2],
+            "challenge": [0, 2],
+            "challenge block": [0, 2]
+        }
 
-        self.debug("action_spec_max: ", action_spec_max)
-        self._action_spec = BoundedArraySpec(
-            minimum=action_spec_min,
-            maximum=action_spec_max,
-            shape=action_spec_max.shape,
-            dtype=np.int32,
-        )  ##gym.spaces.MultiDiscrete(actionSpecNP)
-
-        self._unravel_action_space = unravel_action_space
-        if unravel_action_space:
-            self._do_unravel_action_space()
+        self.set_action_spec(action_spec)
 
         ## make array defining the observation spec
         ## this is the cards, and number of coins for each player
@@ -164,32 +148,10 @@ class CoupGame(engine.Game):
             len(coup_cards.cards.keys()) + 1
         )  # <- one index for each possible card + one for face down card
 
-        self.debug("obs_spec_min: ", obs_spec_min)
-        self.debug("obs_spec_max: ", obs_spec_max)
+        player_names = [p.name for p in self.player_list] 
+        obs_names = ["N Coins", *["Card " + str(i) for i in range(MAX_CARDS)]]
 
-        self._observation_spec = {
-            "observations": BoundedArraySpec(
-                minimum=obs_spec_min.flatten(),
-                maximum=obs_spec_max.flatten(),
-                shape=obs_spec_max.flatten().shape,
-                name="observation",
-                dtype=np.float32,
-            ),
-            "mask": BoundedArraySpec(
-                minimum=0,
-                maximum=1,
-                shape=(self._action_spec.maximum - self._action_spec.minimum + 1,),
-                dtype=np.int32,
-                name="mask",
-            ),
-            "activePlayer": BoundedArraySpec(
-                minimum=0,
-                maximum=self.n_players,
-                shape=(),
-                dtype=np.int32,
-                name="activePlayer",
-            ),
-        }
+        self.set_observation_spec(min=obs_spec_min, max=obs_spec_max, names=[player_names, obs_names])
 
         ## TODO: Add an observation for which player is targetting this player with an action
         ## TODO: Add an observation for which action is currently being attempted and by who
@@ -205,8 +167,6 @@ class CoupGame(engine.Game):
         ## initialise the deck
         self.trace("  Creating deck")
         self.deck = Deck(coup_cards.cards)
-
-        self._reset()
 
     def action_array_to_string(self, action: np.array) -> str:
         """Convert action array to a human readable string
@@ -237,11 +197,8 @@ class CoupGame(engine.Game):
             challenge_block=challenge_block_str,
         )
 
-    def _reset(self):
+    def reset_game(self):
         self.debug("Resetting game")
-        ## set individual pieces back to initial state
-        for player in self.player_list:
-            player.reset()
 
         self.deck.reset()
         self.debug("Un shuffled deck:", self.deck)
@@ -274,13 +231,6 @@ class CoupGame(engine.Game):
         self._info["reward"] = 0
         self._info["skippingTurn"] = False
 
-        return ts.restart(
-            observation={
-                "observation": self.get_observation(self.get_active_player()),
-                "mask": self.get_mask(self.get_active_player()),
-                "activePlayer": self.get_active_player(),
-            }
-        )
 
     ############################################################################################
     #### These are the functions that actually perform the actions specified by the players ####
@@ -309,7 +259,7 @@ class CoupGame(engine.Game):
             + " performed action: coup, Target: "
             + player2.name
         )
-        player1.take_coins(actions["coup"]["cost"])
+        player1.take_coins(ACTIONS["coup"]["cost"])
         player2.lose_influence()
 
         player1.give_reward(10)
@@ -368,7 +318,7 @@ class CoupGame(engine.Game):
     def is_targetted_action(self, action: str):
         """Check if a particular action is targetted
         """
-        return actions[action]["targeted"]
+        return ACTIONS[action]["targeted"]
 
     def perform_attempted_action(self):
         """Perform the action currently stored in self.attempted_action
@@ -378,7 +328,7 @@ class CoupGame(engine.Game):
             "_" + self.attempted_action
         )  ## get the function corresponding to the attempted action
 
-        if actions[self.attempted_action]["targeted"]:
+        if ACTIONS[self.attempted_action]["targeted"]:
             fn(self.current_player_action, self.action_target)
         else:
             fn(self.current_player_action)
@@ -431,7 +381,7 @@ class CoupGame(engine.Game):
         ## 4th variable is whether to challenge the acting player in the challenge phase
         ## 5th variable is whether to challenge the attempted block
         mask_list = []
-        mask_list.append(np.ndarray((len(actions.keys())), dtype=np.int8))
+        mask_list.append(np.ndarray((len(ACTIONS.keys())), dtype=np.int8))
         mask_list.append(np.ndarray((self.n_players,), dtype=np.int8))
         mask_list.append(np.ndarray((2,), dtype=np.int8))
         mask_list.append(np.ndarray((2,), dtype=np.int8))
@@ -442,8 +392,8 @@ class CoupGame(engine.Game):
                 ## if player has >= 10 they can only perform a coup
                 ## and their only choice is which player to target
                 ## so we leave all mask values for actions at their default value of 0
-                for action_id, action in enumerate(actions.keys()):
-                    if self.player_list[player_id].coins >= actions[action]["cost"]:
+                for action_id, action in enumerate(ACTIONS.keys()):
+                    if self.player_list[player_id].coins >= ACTIONS[action]["cost"]:
                         mask_list[0][action_id] = 1
                     else:
                         mask_list[0][action_id] = 0
@@ -528,7 +478,7 @@ class CoupGame(engine.Game):
 
             self.debug("  Allowed actions after unravelling: ")
             ## Now need to unravel the mask using the flattenedActionSpace found before
-            for action in self._unravelled_action_space:
+            for action in self._action_space._unravelled_action_space:
                 all_allowed = 1
                 for action_id, sub_action in enumerate(action):
                     all_allowed *= mask_list[action_id][sub_action]
@@ -661,7 +611,7 @@ class ActionState(engine.GameState):
             targetted = False
             challengable = False
             ## first check if this action has a target
-            if actions[game.attempted_action]["targeted"]:
+            if ACTIONS[game.attempted_action]["targeted"]:
                 game.action_target = (
                     game.current_player_action + 1 + action[1]
                 ) % game.n_players
@@ -676,19 +626,19 @@ class ActionState(engine.GameState):
                 game.debug("Not a targetted action")
 
             ## check if this action can be blocked by any card
-            if actions[game.attempted_action]["blockedBy"] != [""]:
+            if ACTIONS[game.attempted_action]["blockedBy"] != [""]:
                 game.debug(
-                    "Could be blocked by", actions[game.attempted_action]["blockedBy"]
+                    "Could be blocked by", ACTIONS[game.attempted_action]["blockedBy"]
                 )
                 blockable = True
             else:
                 game.debug("Not blockable")
 
             ## check if this action could be challenged
-            if actions[game.attempted_action]["needs"] != "":
+            if ACTIONS[game.attempted_action]["needs"] != "":
                 game.debug(
                     "can be challenged as action requires",
-                    actions[game.attempted_action]["needs"],
+                    ACTIONS[game.attempted_action]["needs"],
                 )
                 challengable = True
             else:
@@ -861,7 +811,7 @@ class ChallengeGeneralState(engine.GameState):
                     game.challenge(
                         game.current_player_challenge,
                         game.current_player_action,
-                        actions[game.attempted_action]["needs"],
+                        ACTIONS[game.attempted_action]["needs"],
                     )
                     == "failed"
                 ):
@@ -908,7 +858,7 @@ class ChallengeTargetState(engine.GameState):
                 game.challenge(
                     game.current_player_challenge,
                     game.current_player_action,
-                    actions[game.attempted_action]["needs"],
+                    ACTIONS[game.attempted_action]["needs"],
                 )
                 == "failed"
             ):
@@ -945,7 +895,7 @@ class ChallengeBlockState(engine.GameState):
             game.challenge(
                 game.current_player_action,
                 game.current_player_block,
-                *actions[game.attempted_action]["blockedBy"],
+                *ACTIONS[game.attempted_action]["blockedBy"],
             )
         else:
             game.info(

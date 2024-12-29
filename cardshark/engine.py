@@ -32,6 +32,146 @@ from tf_agents.trajectories import time_step as ts
 # other cardshark stuff
 from cardshark.named_object import NamedObject
 
+class ActionSpace(NamedObject):
+    """Describes the action space of a Game environment
+    
+    Contains the names of the actions, the limits of the space for each action, and the tensorflow
+    action spec needed when constructing TF agents.
+
+    Attributes:
+        action_names (list of str): The names of each action
+        action_min (list of int): The minimum values each action can take
+        action_max (list of int): The maximum values each action can take
+
+        _tf_spec (tf_agents.specs.BoundedArraySpec): The tensorflow action spec used when
+        constructing agents and the underlying gym environment
+    """
+
+    def __init__(self, spec: typing.Dict[str, typing.Tuple[int]], **kwargs):
+
+        super().__init__(**kwargs)
+
+        self.action_names: typing.List[str] = []
+        self.action_min: np.ndarray = np.zeros((len(spec.items())))
+        self.action_max: np.ndarray = np.zeros((len(spec.items())))
+
+        for i, (name, limits) in enumerate(spec.items()):
+            assert len(limits) == 2, "limits for action " + name + " are the wrong length, should be (min, max)"
+
+            self.action_names.append(name)
+            self.action_min[i] = limits[0]
+            self.action_max[i] = limits[1]
+
+        print(self.action_min)
+        print(self.action_max)
+
+        self._tf_spec = BoundedArraySpec(
+            minimum=self.action_min,
+            maximum=self.action_max,
+            shape=(len(self.action_names), ),
+            dtype=np.int32,
+        )
+
+    
+    def unravel(self):
+        """Unravel the action space of the environment
+
+        e.g. if the current action spec is an N by M multidimensional array of actions,
+        this fn will transform the space into a one dimensional one of size M x N.
+        The structure of the initial higher dimensional space will be stored in the
+        _unravelled_action_space attribute. To get from the 1D action space back to the
+        original space you can do::
+
+            action = self._unravelled_action_space[1DactionID]
+
+        """
+
+        self.debug("Generating unravelled action space")
+        to_product = []
+        for min_val, max_val in zip(self._tf_spec.minimum, self._tf_spec.maximum):
+            self.debug("    MIN:", min_val, "MAX:", max_val)
+            to_product.append(list(range(min_val, max_val)))
+
+        self.debug("  Taking cartesian product of:", to_product)
+
+        self._unravelled_action_space = np.array(
+            list(itertools.product(*to_product))
+        )
+
+        self.debug("  Unravelled action space:", self._unravelled_action_space)
+        self.debug("  Number of possible actions:", len(self._unravelled_action_space))
+
+        self._tf_spec = BoundedArraySpec(
+            minimum=0,
+            maximum=len(self._unravelled_action_space) - 1,
+            shape=(),
+            dtype=np.int32,
+        )
+
+class ObservationSpace(NamedObject):
+    """Describes the observation space of a Game environment
+
+    Contains limits on each observation, names of the observations and the ArraySpec
+    needed for constructing tf agents and gym environment
+
+    Attributes:
+        observation_names (list of list of str): The names of each dimension of the space
+        observation_min (numpy.array): The min values each observation can take
+        observation_max (numpy.array): The max values each observation can take
+        _tf_spec (tf_agents.specs.BoundedArraySpec): The tensorflow observation spec used when
+        constructing agents and the underlying gym environments
+    """
+    
+    def __init__(
+            self, 
+            min: np.ndarray, 
+            max: np.ndarray, 
+            action_space: ActionSpace, 
+            n_players: int, 
+            names: typing.List[typing.List[str]] = None, 
+            **kwargs
+        ):
+
+        super().__init__(**kwargs)
+
+        assert min.shape == max.shape, "Min and Max arrays must have matching shapes"
+
+        if names is not None:
+            assert len(names) == len(min.shape), "Name list shape does not match array shape"
+
+        self.observation_names: typing.List[typing.List[str]] = names
+        self.observation_min: np.ndarray = min
+        self.observation_max: np.ndarray = max
+
+        self.debug("obs_spec_min: ", min)
+        self.debug("obs_spec_max: ", max)
+
+        self._tf_spec = {
+            "observations": BoundedArraySpec(
+                minimum=min.flatten(),
+                maximum=max.flatten(),
+                shape=max.flatten().shape,
+                name="observation",
+                dtype=np.float32,
+            ),
+            "mask": BoundedArraySpec(
+                minimum=0,
+                maximum=1,
+                shape=(action_space._tf_spec.maximum - action_space._tf_spec.minimum + 1,),
+                dtype=np.int32,
+                name="mask",
+            ),
+            "activePlayer": BoundedArraySpec(
+                minimum=0,
+                maximum=n_players,
+                shape=(),
+                dtype=np.int32,
+                name="activePlayer",
+            ),
+        }
+
+
+
 
 class Game(py_environment.PyEnvironment, NamedObject, ABC):
     """Base class for user defined Games
@@ -39,7 +179,7 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
     This should describe the state of the game. You'll need to implement 
     the following methods for your game:
 
-        - _reset()
+        - reset_game()
         - check_status()
         - get_mask()
         - get_observation()
@@ -54,11 +194,9 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
 
         self._active_player = None
         self._game_state = None
-        self._action_spec = None
-        self._action_spec = None
-        self._unravelled_action_space = None
+        self._action_space = None
+        self._observation_space = None
         self._winner = None
-        self._observation_spec = None
         self._step_count = 0
         self._info = {}
 
@@ -68,7 +206,7 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
         py_environment.PyEnvironment.__init__(self)
 
     @abstractmethod
-    def _reset(self):
+    def reset_game(self):
         """Reset the Game back to "factory settings"
         
         Will get called when starting a new game, and in the
@@ -102,6 +240,59 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
         was previously defined for this Game.
         """
 
+    def _reset(self):
+        """Reset all players, call the user defined reset_game() and get the reset timestep"""
+
+        ## set individual pieces back to initial state
+        for player in self.player_list:
+            player.reset()
+
+        self.reset_game()
+
+        return ts.restart(
+            observation={
+                "observation": self.get_observation(self.get_active_player()),
+                "mask": self.get_mask(self.get_active_player()),
+                "activePlayer": self.get_active_player(),
+            }
+        )
+
+    def set_action_spec(self, spec: typing.Dict[str, typing.Tuple[int]]) -> None:
+        """Use this to describe the possible actions for agents playing your game
+
+        Construct an ActionSpace from spec and assign it to the _action_space attribute.
+
+        Args:
+          spec (dict of str: tuple of int): Dictionary describing the actions. Keys
+          should be the name of the action. Values should be tuple of (min, max) possible
+          values for the action
+        """
+        
+        self._action_space = ActionSpace(spec, name = self.name + "_ActionSpec", logger = self.logger)
+        
+        if self._unravel_action_space:
+            self._action_space.unravel()
+
+    def set_observation_spec(self, min: np.ndarray, max: np.ndarray, names: typing.List[typing.List[str]] = None) -> None:
+        """Use this to describe the shape of the observations for agents playing your game
+        
+        Args:
+            min (numpy.ndarray): Array describing the minimum values of the observation array
+            max (numpy.ndarray): Array describing the maximum values of the observation array
+            names (list of list of str): 
+        """
+
+        assert self._action_space is not None, "You need to call set_action_spec() before calling set_observation_spec()"
+    
+        self._observation_space = ObservationSpace(
+            min, 
+            max, 
+            self._action_space, 
+            self.n_players, 
+            names, 
+            name = self.name + "_ObservationSpace", 
+            logger = self.logger
+        )
 
     ## for returning general info about the environment, not things necessarily
     ## needed by agents as observations.
@@ -128,18 +319,18 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
             - "activePlayer": ArraySpec describing the part of the observation that 
             tells which player is active
         """
-        return self._observation_spec
+        return self._observation_space._tf_spec
 
     def action_spec(self) -> BoundedArraySpec:
         """Get the action specification for the environment associated with this Game object"""
-        return self._action_spec
+        return self._action_space._tf_spec
 
     def flatten_action(self, action_ndim):
         """Take an N dimensional action array and find which 1d action index it corresponds to"""
 
         # could definitely be smarter about this but I'm lazy... :/
-        for i in range(self._unravelled_action_space.shape[0]):
-            if np.all(self._unravelled_action_space[i] == action_ndim):
+        for i in range(self._action_space._unravelled_action_space.shape[0]):
+            if np.all(self._action_space._unravelled_action_space[i] == action_ndim):
                 return np.array([i])
 
         raise ValueError(
@@ -160,41 +351,6 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
             raise ValueError("Negative index! What is a negative player?!?!")
 
         self._active_player = player_id
-
-    def _do_unravel_action_space(self):
-        """Unravel the action space of the environment
-
-        e.g. if the current action spec is an N by M multidimensional array of actions,
-        this fn will transform the space into a one dimensional one of size M x N.
-        The structure of the initial higher dimensional space will be stored in the
-        _unravelled_action_space attribute. To get from the 1D action space back to the
-        original space you can do::
-
-            action = self._unravelled_action_space[1DactionID]
-
-        """
-
-        self.debug("Generating unravelled action space")
-        to_product = []
-        for min_val, max_val in zip(self._action_spec.minimum, self._action_spec.maximum):
-            self.debug("    MIN:", min_val, "MAX:", max_val)
-            to_product.append(list(range(min_val, max_val)))
-
-        self.debug("  Taking cartesian product of:", to_product)
-
-        self._unravelled_action_space = np.array(
-            list(itertools.product(*to_product))
-        )
-
-        self.debug("  Unravelled action space:", self._unravelled_action_space)
-        self.debug("  Number of possible actions:", len(self._unravelled_action_space))
-
-        self._action_spec = BoundedArraySpec(
-            minimum=0,
-            maximum=len(self._unravelled_action_space) - 1,
-            shape=(),
-            dtype=np.int32,
-        )
 
     def check_status(self) -> bool:
         """Check the current status of the game. If finished move to reward state
@@ -232,8 +388,8 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
 
         ## might need to re-ravel the action
         if self._unravel_action_space:
-            action = self._unravelled_action_space[action]
-            self.debug("unravelled actions:", action)
+            action = self._action_space._unravelled_action_space[action]
+            self.debug("ravelled actions:", action)
 
         self.debug("Active player", self.player_list[self._active_player])
 
