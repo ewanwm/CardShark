@@ -179,10 +179,10 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
     This should describe the state of the game. You'll need to implement 
     the following methods for your game:
 
-        - reset_game()
+        - _reset_game()
         - check_status()
-        - get_mask()
-        - get_observation()
+        - _get_mask()
+        - _get_observation()
     """
 
     def __init__(
@@ -206,7 +206,7 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
         py_environment.PyEnvironment.__init__(self)
 
     @abstractmethod
-    def reset_game(self):
+    def _reset_game(self):
         """Reset the Game back to "factory settings"
         
         Will get called when starting a new game, and in the
@@ -223,15 +223,12 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
         """
 
     @abstractmethod
-    def get_mask(self, player_id: int) -> np.array:
-        """Get a mask representing the allowed actions
-        
-        Array should have the same shape as the action array. 0 represents
-        a disallowed action and 1 an allowed action.
+    def _get_mask(self, action: np.ndarray, player_id: int) -> np.array:
+        """Should return True if the provided action is allowed and False otherwise
         """
 
     @abstractmethod
-    def get_observation(self, player_id: int) -> np.ndarray:
+    def _get_observation(self, player_id: int) -> np.ndarray:
         """Get the observation representing the current state of the game
         
         This will be passed to the reinforcement learning agents and
@@ -241,21 +238,35 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
         """
 
     def _reset(self):
-        """Reset all players, call the user defined reset_game() and get the reset timestep"""
+        """Reset all players, call the user defined _reset_game() and get the reset timestep"""
 
         ## set individual pieces back to initial state
         for player in self.player_list:
             player.reset()
 
-        self.reset_game()
+        self._reset_game()
 
         return ts.restart(
             observation={
-                "observation": self.get_observation(self.get_active_player()),
+                "observation": self._get_observation(self.get_active_player()),
                 "mask": self.get_mask(self.get_active_player()),
                 "activePlayer": self.get_active_player(),
             }
         )
+    
+    def get_mask(self, player_id: int):
+        """Get the mask values for all possible actions using the user defined _get_mask()"""
+
+        mask = np.zeros((self._action_space._unravelled_action_space.shape[0]), dtype=np.int32)
+
+        for action_id, action in enumerate(self._action_space._unravelled_action_space):
+            if self._get_mask(action, player_id):
+                mask[action_id] = 1
+            else:
+                mask[action_id] = 0
+
+        self.trace("get_mask(): mask:\n", mask)
+        return mask
 
     def set_action_spec(self, spec: typing.Dict[str, typing.Tuple[int]]) -> None:
         """Use this to describe the possible actions for agents playing your game
@@ -418,7 +429,7 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
                     reward=reward,
                     discount=1.0,
                     observation={
-                        "observation": self.get_observation(self._active_player),
+                        "observation": self._get_observation(self._active_player),
                         "mask": self.get_mask(self._active_player),
                         "activePlayer": self._active_player,
                     },
@@ -429,7 +440,7 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
                     reward=reward,
                     discount=1.0,
                     observation={
-                        "observation": self.get_observation(self._active_player),
+                        "observation": self._get_observation(self._active_player),
                         "mask": self.get_mask(self._active_player),
                         "activePlayer": self._active_player,
                     },
@@ -440,7 +451,7 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
             step = ts.termination(
                 reward=reward,
                 observation={
-                    "observation": self.get_observation(self._active_player),
+                    "observation": self._get_observation(self._active_player),
                     "mask": self.get_mask(self._active_player),
                     "activePlayer": self._active_player,
                 },
