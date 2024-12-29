@@ -61,7 +61,7 @@ class CoupHumanAgent(HumanAgent):
             "######################################################################\n"
         )
 
-    def _print_options(self, dim, mask_nd):
+    def _print_options(self, dim, mask=None):
         """Prints out the players options corresponding to the specified action array dimension"""
 
         ## set what to print depending on which action dimension was specified
@@ -89,7 +89,7 @@ class CoupHumanAgent(HumanAgent):
 
         ## now print the options
         for i, name in enumerate(names):
-            if mask_nd[dim][i] == 0:
+            if mask is not None and mask[i] == 0:
                 colour = GRAY
             else:
                 colour = RESET
@@ -100,40 +100,31 @@ class CoupHumanAgent(HumanAgent):
                 )
             )
 
-    def _get_action(self):
-        ## 1st variable is which action to take in the action phase of the game
-        ## 2nd variable is which other player to target if applicable
-        ## 3rd variable is whether to try to block current attemted action in blocking phase
-        ## 4th variable is whether to challenge the acting player in the challenge phase
-        ## 5th variable is whether to challenge the attempted block
+    def _get_action_mask(self):
+        
+        n_actions = int(self._game._action_space.action_max[0])
+        mask = np.zeros(n_actions)
+        for action in range(n_actions):
+            ## check if this action is valid for at least one player
+            for player_id in range(self._game.n_players):
+                if self._game._get_mask(np.array([action, player_id, 0, 0, 0]), self._player_id):
+                    mask[action] = 1
+        
+        return mask
 
-        self._print_observations()
+    def _get_target_mask(self, action: int):
 
-        mask_nd = self._game.get_mask_ndim(self._player_id)
+        n_targets = int(self._game._action_space.action_max[1])
+        mask = np.zeros(n_targets)
 
-        ret = np.zeros(5, dtype=int)
+        for target in range(n_targets):
+            if self._game._get_mask(np.array([action, target, 0, 0, 0]), self._player_id):
+                mask[target] = 1.0
+        
+        return mask
 
-        for dim in range(5):
-            # if all options invalid skip this dim
-            if not np.any(np.array(mask_nd[dim]) == 1):
-                continue
-
-            # if only one option valid then have to take it
-            if np.sum(np.array(mask_nd[dim])) == 1:
-                ret[dim] = np.where(np.array(mask_nd[dim]) == 1)[0]
-                continue
-
-            ## horrible nasty ugly hack for when action is not targetted
-            ## TODO: this really needs to be done inside the game and mask out player choice
-            ## when action is not targetted. This way ML agents will not need to worry about
-            ## trying to learn extra stuff when they don't need to
-            if dim == 1:
-                if not self._game.is_targetted_action(coup_engine.ACTION_NAMES[ret[0]]):
-                    ret[1] = self._game.n_players - 1
-                    continue
-
-            self._print_options(dim, mask_nd)
-
+    def _get_user_input(self, max: int, mask=None) -> int:
+        
             # get user input and check it's valid
             while True:
                 inp = input("choice: ")
@@ -146,19 +137,64 @@ class CoupHumanAgent(HumanAgent):
 
                 inp_int = int(inp)
 
-                if inp_int >= len(mask_nd[dim]):
+                if inp_int >= max:
                     valid = False
                     message = "Value out of range"
 
-                elif mask_nd[dim][inp_int] == 0:
-                    valid = False
-                    message = "Option not allowed"
+                elif mask is not None:
+                    if mask[inp_int] == 0:
+                        valid = False
+                        message = "Option not allowed"
 
                 if valid:
-                    ret[dim] = inp_int
-                    break
+                    return inp_int
 
                 ## if not valid, tell the user why and loop will repeat
                 print("{}INVALID CHOICE: {}{}".format(RED, message, RESET))
+
+    def _get_action(self):
+        ## 1st variable is which action to take in the action phase of the game
+        ## 2nd variable is which other player to target if applicable
+        ## 3rd variable is whether to try to block current attemted action in blocking phase
+        ## 4th variable is whether to challenge the acting player in the challenge phase
+        ## 5th variable is whether to challenge the attempted block
+
+        ret = np.zeros(5, dtype=int)
+
+        if not self._game.player_list[self._player_id].is_alive:
+            return ret
+        
+        self._print_observations()
+
+        if self._game._game_state == coup_engine.ActionState:
+
+            ## print possible actions and get desired one from player
+            self._print_options(0, self._get_action_mask())
+            ret[0] = self._get_user_input(self._game._action_space.action_max[0], self._get_action_mask())
+
+            # check that at least one target is valid
+            if np.sum(self._get_target_mask(ret[0])[:-1]) >= 1:
+                print("ASASASDADS")
+                ## print possible targets and get desired one from player
+                self._print_options(1, self._get_target_mask(ret[0]))
+                ret[1] = self._get_user_input(self._game._action_space.action_max[1], self._get_target_mask(ret[0]))
+            else:
+                ret[1] = self._game.n_players - 1
+
+        elif self._game._game_state in [coup_engine.BlockingGeneralState, coup_engine.BlockingTargetState]:
+
+            self._print_options(2)
+            ret[2] = self._get_user_input(self._game._action_space.action_max[2])
+            
+        elif self._game._game_state in [coup_engine.ChallengeGeneralState, coup_engine.ChallengeTargetState]:
+
+            self._print_options(3)
+            ret[3] = self._get_user_input(self._game._action_space.action_max[3])
+            
+        elif self._game._game_state == coup_engine.ChallengeBlockState:
+
+            self._print_options(4)
+            ret[4] = self._get_user_input(self._game._action_space.action_max[4])
+
 
         return ret

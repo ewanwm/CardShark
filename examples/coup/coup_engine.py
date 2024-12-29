@@ -197,7 +197,7 @@ class CoupGame(engine.Game):
             challenge_block=challenge_block_str,
         )
 
-    def reset_game(self):
+    def _reset_game(self):
         self.debug("Resetting game")
 
         self.deck.reset()
@@ -368,130 +368,95 @@ class CoupGame(engine.Game):
 
         return False
 
-    def get_mask_ndim(self, player_id: int):
-        """Get n dimensional mask
-        
-        Has same shape as the n dimensional action array.
-        """
+    def _get_mask(self, action, player_id):
 
-        ## make the action space spec
-        ## 1st variable is which action to take in the action phase of the game
-        ## 2nd variable is which other player to target if applicable
-        ## 3rd variable is whether to try to block current attemted action in blocking phase
-        ## 4th variable is whether to challenge the acting player in the challenge phase
-        ## 5th variable is whether to challenge the attempted block
-        mask_list = []
-        mask_list.append(np.ndarray((len(ACTIONS.keys())), dtype=np.int8))
-        mask_list.append(np.ndarray((self.n_players,), dtype=np.int8))
-        mask_list.append(np.ndarray((2,), dtype=np.int8))
-        mask_list.append(np.ndarray((2,), dtype=np.int8))
-        mask_list.append(np.ndarray((2,), dtype=np.int8))
+        ## break down the attempted action
+        attempted_action = action[0]
+        target = action[1]
+        block = action[2]
+        challenge = action[3]
+        challenge_block = action[4]
 
+        self.trace("get_mask(): getting mask for action:\n", action)
         if self._game_state == ActionState:
-            if self.player_list[player_id].coins < 10:  ##10:
-                ## if player has >= 10 they can only perform a coup
-                ## and their only choice is which player to target
-                ## so we leave all mask values for actions at their default value of 0
-                for action_id, action in enumerate(ACTIONS.keys()):
-                    if self.player_list[player_id].coins >= ACTIONS[action]["cost"]:
-                        mask_list[0][action_id] = 1
-                    else:
-                        mask_list[0][action_id] = 0
-
-                    ## currently unimplemented actions
-                    if action in ["exchange", "examine"]:
-                        mask_list[0][action_id] = 0
-
-                    ## should never actually get selected in action phase
-                    if action == "None":
-                        mask_list[0][action_id] = 0
 
             ## have >= 10 coins so can only perform coup
+            if self.player_list[player_id].coins > 10:
+                if attempted_action != ActionEnum["coup"].value - 1:
+                    self.trace("_get_mask(): player has > 10 coins so can only coup")
+                    return False
+
+            ## currently unimplemented actions
+            if ACTION_NAMES[attempted_action] in ["exchange", "examine"]:
+                self.trace("_get_mask(): action not implemented")
+                return False
+
+            ## player needs to have enough coins for the action
+            if self.player_list[player_id].coins < ACTIONS[ACTION_NAMES[attempted_action]]["cost"]:
+                self.trace("_get_mask(): player too poor to do action")
+                return False
+
+            ## "none" action should never actually get selected in action phase
+            if attempted_action == 0:
+                self.trace("_get_mask(): can't choose no action when in action state")
+                return False
+
+            ## can't target a dead player
+            if not self.player_list[(player_id + 1 + target) % self.n_players].is_alive:
+                self.trace("_get_mask(): target is not alive")
+                return False
+
+            ## if action not targetted, shouldn't pick a target
+            if not self.is_targetted_action(ACTION_NAMES[attempted_action]):
+                if target != self.n_players -1:
+                    self.trace("_get_mask(): action not targetted so need to choose no target")
+                    return False
+
             else:
-                self.debug("Player has >= 10 coins so can only perform coup")
-                mask_list[0][:] = 0
-                mask_list[0][ActionEnum["coup"].value - 1] = 1
-
-            ## can only target players that are alive
-            for other_player in range(1, self.n_players):
-                if self.player_list[(other_player + player_id) % self.n_players].is_alive:
-                    mask_list[1][other_player - 1] = 1
-                else:
-                    mask_list[1][other_player - 1] = 0
-
-            mask_list[0][ActionEnum["None"].value - 1] = 0  ## don't allow no action
-            mask_list[1][self.n_players - 1] = 0  ## don't allow no target
+                ## if it is targetted can't choose no target
+                if target == self.n_players - 1:
+                    self.trace("_get_mask(): action is targetted so need to choose a target")
+                    return False
 
         else:
-            mask_list[0][:] = 0
-            mask_list[1][:] = 0
+            # if not in action state can only choose "none" action and no target
+            if attempted_action != 0:
+                self.trace("_get_mask(): not in action state so need to choose no action")
+                return False
+            if target != self.n_players - 1:
+                self.trace("_get_mask(): action is targetted so need to choose a target")
+                return False
 
-            mask_list[0][ActionEnum["None"].value - 1] = 1  ## allow no action
-            mask_list[1][self.n_players - 1] = 1  ## allow no target
+        # if not in a blocking state, block option needs to be "no"
+        if not self._game_state in [BlockingGeneralState, BlockingTargetState]:
+            if block != 0:
+                self.trace("_get_mask(): not in block state so need to choose no block")
+                return False
 
-        mask_list[2][0] = 1
-        if self._game_state in [BlockingGeneralState, BlockingTargetState]:
-            mask_list[2][1] = 1
-        else:
-            mask_list[2][1] = 0
+        # if not in a challenge state, challenge option needs to be "no"
+        if not self._game_state in [ChallengeGeneralState, ChallengeTargetState]:
+            if challenge != 0:
+                self.trace("_get_mask(): not in challenge state so need to choose no challenge")
+                return False
 
-        mask_list[3][0] = 1
-        if self._game_state in [ChallengeGeneralState, ChallengeTargetState]:
-            mask_list[3][1] = 1
-        else:
-            mask_list[3][1] = 0
-
-        mask_list[4][0] = 1
-        if self._game_state == ChallengeBlockState:
-            mask_list[4][1] = 1
-        else:
-            mask_list[4][1] = 0
+        if not self._game_state == ChallengeBlockState:
+            if challenge_block != 0:
+                self.trace("_get_mask(): not in challenge block state so need to choose no challenge")
+                return False
 
         ## If in final reward state, player cant do anything
         if self._game_state == engine.RewardState:
-            for mask_i in range(len(mask_list)):
-                mask_list[mask_i][:] = 0
+           return False
 
         ## If dead, player cant do anything
         if not self.player_list[player_id].is_alive:
-            for mask_i in range(len(mask_list)):
-                mask_list[mask_i][:] = 0
+            return False
+        
+        ## Looks good, carry on
+        self.trace("_get_mask(): Action allowed!")
+        return True
 
-        self.debug("Mask: ", mask_list)
-
-        return mask_list
-
-    def get_mask(self, player_id: int) -> np.array:
-        ## get action space mask for player at index player_id in this games player list
-        self.debug(
-            "Getting action mask for player",
-            self.player_list[player_id].name,
-            "at index",
-            player_id,
-        )
-
-        mask_list = self.get_mask_ndim(player_id)
-
-        if self._unravel_action_space:
-            self.debug("Unravelling mask")
-            unravelled_mask_list = []
-
-            self.debug("  Allowed actions after unravelling: ")
-            ## Now need to unravel the mask using the flattenedActionSpace found before
-            for action in self._action_space._unravelled_action_space:
-                all_allowed = 1
-                for action_id, sub_action in enumerate(action):
-                    all_allowed *= mask_list[action_id][sub_action]
-
-                if all_allowed:
-                    self.debug("   ", self.action_array_to_string(action))
-                unravelled_mask_list.append(all_allowed)
-
-            mask = np.array(unravelled_mask_list)
-
-        return mask
-
-    def get_observation(self, player_id: int) -> np.ndarray:
+    def _get_observation(self, player_id: int) -> np.ndarray:
         self.debug(
             "Getting observation for player",
             self.player_list[player_id].name,
