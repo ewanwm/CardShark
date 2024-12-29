@@ -226,10 +226,6 @@ class CoupGame(engine.Game):
         self._winner = -999
 
         self._step_count = 0
-        self._info = {}
-
-        self._info["reward"] = 0
-        self._info["skippingTurn"] = False
 
 
     ############################################################################################
@@ -557,10 +553,11 @@ class ActionState(engine.GameState):
                 game.player_list[game.current_player_action].name,
                 "is dead! skipping their action",
             )
-            game._info["skippingTurn"] = True
             game.current_player_action = (game.current_player_action + 1) % game.n_players
             game.set_active_player(game.current_player_action)
 
+            game.skipped_turn()
+            
             return ActionState
 
         else:
@@ -658,9 +655,10 @@ class BlockingGeneralState(engine.GameState):
                 game.player_list[game.current_player_block].name,
                 "is dead so they can't really block anything",
             )
-            game._info["skippingTurn"] = True
             game.current_player_block = (game.current_player_block + 1) % game.n_players
             game.set_active_player(game.current_player_block)
+
+            game.skipped_turn()
 
             return BlockingGeneralState
 
@@ -743,11 +741,12 @@ class ChallengeGeneralState(engine.GameState):
                 game.player_list[game.current_player_challenge].name,
                 "is dead so they can't really challenge anything",
             )
-            game._info["skippingTurn"] = True
             game.current_player_challenge = (
                 game.current_player_challenge + 1
             ) % game.n_players
             game.set_active_player(game.current_player_challenge)
+
+            game.skipped_turn()
 
             return ChallengeGeneralState
 

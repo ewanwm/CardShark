@@ -198,7 +198,11 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
         self._observation_space = None
         self._winner = None
         self._step_count = 0
+
         self._info = {}
+        self._info["winner"] = -999
+        self._info["reward"] = 0
+        self._info["skippingTurn"] = False
 
         self.player_list = []
 
@@ -385,6 +389,16 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
             return True
 
         return False
+    
+    def skipped_turn(self) -> None:
+        """Use this to inform the game that the last players turn was skipped
+
+        Not strictly necessary but can be helpful for training agents as it will
+        inform them to disregard the skipped turn when training as it won't provide
+        them any useful information and might confuse their training algorithm.
+        """
+        
+        self._info["skippingTurn"] = True
 
     def _step(self, action: np.ndarray) -> None:
         """Step the game forward one iteration"""
