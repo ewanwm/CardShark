@@ -245,29 +245,23 @@ class MultiAgent(AgentBase):
         ## Wrap these in tf functions to speed things up a bit
         self._agent.train = common.function(self._agent.train)
 
-    ## This exists so that it can be wrapped in a tfFunction and then used
-    ## in the following functions. If wrapping was done there then it would
-    ## be done every time the fn was called and tensorflow would be sad
     @tfFunction
-    def _action_from_policy(self, policy, time_step):
-        """Utility fn to get an action from a specified policy
-        """
-        return policy.action(time_step)
-
     def _random_action(self, time_step):
         """Get a random action
         """
-        return self._action_from_policy(self.random_policy, time_step)
+        return self.random_policy.action(time_step)
 
+    @tfFunction
     def _collect_action(self, time_step):
         """Get an action decided by the agents collect policy
         """
-        return self._action_from_policy(self._agent.collect_policy, time_step)
+        return self._agent.collect_policy.action(time_step)
 
+    @tfFunction
     def _inference_action(self, time_step):
         """Get an action decided using the agents trained policy
         """
-        return self._action_from_policy(self._agent.policy, time_step)
+        return self._agent.policy(time_step)
 
     def save_checkpoint(self):
         """Save a checkpoint of the agents internal training state
