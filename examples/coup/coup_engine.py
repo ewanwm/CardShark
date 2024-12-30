@@ -1,7 +1,6 @@
 """Derived engine classes to run Coup game
 
 TODO: known Issues:
-    - when blocking and challenging, players can be asked to block own action
     - sometimes when an action is challenged and the challenge fails, the action
       doesn't get performed
     - can't block assassination attempts, only challenge. Will need to implement
@@ -149,16 +148,13 @@ class CoupGame(engine.Game):
             len(coup_cards.cards.keys()) + 1
         )  # <- one index for each possible card + one for face down card
         obs_spec_max[:, -1] = (
-            1
-        )  # <- one index for each possible card + one for face down card
+            len(ACTIONS.keys())
+        )  # <- one index for each possible action
 
         player_names = [p.name for p in self.player_list] 
-        obs_names = ["N Coins", *["Card " + str(i) for i in range(MAX_CARDS)], "Current Actor"]
+        obs_names = ["N Coins", *["Card " + str(i) for i in range(MAX_CARDS)], "Current Action"]
 
         self.set_observation_spec(min=obs_spec_min, max=obs_spec_max, names=[player_names, obs_names])
-
-        ## TODO: Add an observation for which player is targetting this player with an action
-        ## TODO: Add an observation for which action is currently being attempted and by who
 
         ## initialise the players
         ## TODO: Move this to Game initialiser. Need to have some register_player_class() method
@@ -480,10 +476,6 @@ class CoupGame(engine.Game):
         ## get observarion for player at index player_id in this games player list
         observation = np.zeros((self.n_players, 1 + MAX_CARDS + 1), dtype=np.float32)
 
-        ## if this player is current action player, set the action player bit
-        if self.current_player_action == player_id:
-            observation[0, -1] = 1
-
         ## first fill in the observation for this player, always the first row in the observation
         ## so that any player will always see itself at the first position
         self.trace("Adding this players info")
@@ -507,7 +499,7 @@ class CoupGame(engine.Game):
 
             ## if this player is current action player, set the action player bit
             if other_player_id == self.current_player_action:
-                observation[other_player_counter, -1] = 1
+                observation[other_player_counter, -1] = ActionEnum[self.attempted_action].value - 1
 
             ## can only see other players cards if they are dead
             for card_id in range(MAX_CARDS):
