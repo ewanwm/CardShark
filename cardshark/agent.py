@@ -261,7 +261,7 @@ class MultiAgent(AgentBase):
     def _inference_action(self, time_step):
         """Get an action decided using the agents trained policy
         """
-        return self._agent.policy(time_step)
+        return self._agent.policy.action(time_step)
 
     def save_checkpoint(self):
         """Save a checkpoint of the agents internal training state

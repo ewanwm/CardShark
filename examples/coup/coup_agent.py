@@ -100,6 +100,30 @@ class CoupHumanAgent(HumanAgent):
                 )
             )
 
+    def _get_challenge_mask(self):
+        n_targets = int(self._game._action_space.action_max[1])
+
+        mask = np.zeros(2)
+
+        if self._game._get_mask(np.array([0, n_targets - 1, 0, 0, 0]), self._player_id):
+            mask[0] = 1
+        if self._game._get_mask(np.array([0, n_targets - 1, 0, 1, 0]), self._player_id):
+            mask[1] = 1
+
+        return mask
+
+    def _get_block_mask(self):
+        n_targets = int(self._game._action_space.action_max[1])
+
+        mask = np.zeros(2)
+
+        if self._game._get_mask(np.array([0, n_targets - 1, 0, 0, 0]), self._player_id):
+            mask[0] = 1
+        if self._game._get_mask(np.array([0, n_targets - 1, 1, 0, 0]), self._player_id):
+            mask[1] = 1
+
+        return mask
+
     def _get_action_mask(self):
         
         n_actions = int(self._game._action_space.action_max[0])
@@ -174,7 +198,6 @@ class CoupHumanAgent(HumanAgent):
 
             # check that at least one target is valid
             if np.sum(self._get_target_mask(ret[0])[:-1]) >= 1:
-                print("ASASASDADS")
                 ## print possible targets and get desired one from player
                 self._print_options(1, self._get_target_mask(ret[0]))
                 ret[1] = self._get_user_input(self._game._action_space.action_max[1], self._get_target_mask(ret[0]))
@@ -183,13 +206,13 @@ class CoupHumanAgent(HumanAgent):
 
         elif self._game._game_state in [coup_engine.BlockingGeneralState, coup_engine.BlockingTargetState]:
 
-            self._print_options(2)
-            ret[2] = self._get_user_input(self._game._action_space.action_max[2])
+            self._print_options(2, self._get_block_mask())
+            ret[2] = self._get_user_input(self._game._action_space.action_max[2], self._get_block_mask())
             
         elif self._game._game_state in [coup_engine.ChallengeGeneralState, coup_engine.ChallengeTargetState]:
 
-            self._print_options(3)
-            ret[3] = self._get_user_input(self._game._action_space.action_max[3])
+            self._print_options(3, self._get_challenge_mask())
+            ret[3] = self._get_user_input(self._game._action_space.action_max[3], self._get_challenge_mask())
             
         elif self._game._game_state == coup_engine.ChallengeBlockState:
 
