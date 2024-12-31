@@ -113,14 +113,9 @@ class CoupGame(engine.Game):
         ## make the action space spec
         ## 1st variable is which action to take in the action phase of the game
         ## 2nd variable is which other player to target if applicable
-        ## 3rd variable is whether to try to block current attemted action in blocking phase
-        ## 4th variable is whether to challenge the acting player in the challenge phase
+        ## 3rd variable is whether to try to block or challenge current attemted action
         ## 5th variable is whether to challenge the attempted block
-        ### TODO: I think 3rd and 4th variable should be merged into one with
-        ###   3 options: none, block, and challenge
-        ###   so that situations where either block or challenge are valid can be
-        ###   dealt with more easily in situations where only one is valid,
-        ###   can easily just mask out the other one.
+
         action_spec = {
             "action": [0, len(ACTIONS.keys())],
             "target": [0, self.n_players],
