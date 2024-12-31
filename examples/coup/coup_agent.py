@@ -78,12 +78,9 @@ class CoupHumanAgent(HumanAgent):
                     ].name
                 )
         elif dim == 2:
-            print("Do you want to try to block this action?")
-            names = ["No", "Yes"]
+            print("What would you like to do?")
+            names = ["Nothing", "Challenge", "Block"]
         elif dim == 3:
-            print("Do you want to try to challenge this action?")
-            names = ["No", "Yes"]
-        elif dim == 4:
             print("Do you want to try to challenge this block?")
             names = ["No", "Yes"]
 
@@ -100,27 +97,14 @@ class CoupHumanAgent(HumanAgent):
                 )
             )
 
-    def _get_challenge_mask(self):
+    def _get_block_challenge_mask(self):
         n_targets = int(self._game._action_space.action_max[1])
 
-        mask = np.zeros(2)
+        mask = np.zeros(3)
 
-        if self._game._get_mask(np.array([0, n_targets - 1, 0, 0, 0]), self._player_id):
-            mask[0] = 1
-        if self._game._get_mask(np.array([0, n_targets - 1, 0, 1, 0]), self._player_id):
-            mask[1] = 1
-
-        return mask
-
-    def _get_block_mask(self):
-        n_targets = int(self._game._action_space.action_max[1])
-
-        mask = np.zeros(2)
-
-        if self._game._get_mask(np.array([0, n_targets - 1, 0, 0, 0]), self._player_id):
-            mask[0] = 1
-        if self._game._get_mask(np.array([0, n_targets - 1, 1, 0, 0]), self._player_id):
-            mask[1] = 1
+        for value in range(3):
+            if self._game._get_mask(np.array([0, n_targets - 1, value, 0]), self._player_id):
+                mask[value] = 1
 
         return mask
 
@@ -183,7 +167,7 @@ class CoupHumanAgent(HumanAgent):
         ## 4th variable is whether to challenge the acting player in the challenge phase
         ## 5th variable is whether to challenge the attempted block
 
-        ret = np.zeros(5, dtype=int)
+        ret = np.zeros(4, dtype=int)
 
         if not self._game.player_list[self._player_id].is_alive:
             return ret
@@ -204,20 +188,16 @@ class CoupHumanAgent(HumanAgent):
             else:
                 ret[1] = self._game.n_players - 1
 
-        elif self._game._game_state in [coup_engine.BlockingGeneralState, coup_engine.BlockingTargetState]:
+        elif self._game._game_state in [coup_engine.BlockingGeneralState, coup_engine.ChallengeGeneralState, coup_engine.BlockOrChallengeState]:
 
-            self._print_options(2, self._get_block_mask())
-            ret[2] = self._get_user_input(self._game._action_space.action_max[2], self._get_block_mask())
-            
-        elif self._game._game_state in [coup_engine.ChallengeGeneralState, coup_engine.ChallengeTargetState]:
-
-            self._print_options(3, self._get_challenge_mask())
-            ret[3] = self._get_user_input(self._game._action_space.action_max[3], self._get_challenge_mask())
+            mask = self._get_block_challenge_mask()
+            self._print_options(2, mask)
+            ret[2] = self._get_user_input(self._game._action_space.action_max[2], mask)
             
         elif self._game._game_state == coup_engine.ChallengeBlockState:
 
-            self._print_options(4)
-            ret[4] = self._get_user_input(self._game._action_space.action_max[4])
+            self._print_options(3)
+            ret[3] = self._get_user_input(self._game._action_space.action_max[3])
 
 
         return ret
