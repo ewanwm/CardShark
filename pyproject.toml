@@ -1,0 +1,38 @@
+[project]
+    name = "cardshark"
+    dynamic = ["version"]
+
+    authors = [
+        {name = "Ewan Miller", email = "ewan.m0312@gmail.com"}
+    ]
+
+    maintainers = [
+        {name = "Ewan Miller", email = "ewan.m0312@gmail.com"}
+    ]
+
+    description = "Engine for creating card games and teaching AI agents to play them"
+
+    readme = "README.md"
+
+    dependencies = [
+        "tensorflow<=2.15.0",
+        "tf-agents",
+        "numpy",
+        "matplotlib",
+    ]
+    
+    keywords = [
+        "card", 
+        "game", 
+        "game engine", 
+        "machine learning", 
+        "artificial intelligence", 
+        "reinforcement learning"
+    ]
+
+    requires-python= "<= 3.11.0"
+
+[build-system]
+    requires = ["setuptools"]
+    build-backend = "setuptools.build_meta"
+
