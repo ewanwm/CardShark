@@ -14,7 +14,7 @@ from tf_agents import environments
 from cardshark import logging as log
 from cardshark.agent import MultiAgent
 
-from examples.coup import coup_engine, coup_agent
+from cardshark.examples.coup import coup_engine, coup_agent
 
 n_players = 4
 

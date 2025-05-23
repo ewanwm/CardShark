@@ -165,7 +165,7 @@ class ObservationSpace(NamedObject):
                 minimum=0,
                 maximum=n_players,
                 shape=(),
-                dtype=np.int32,
+                dtype=np.int64,
                 name="activePlayer",
             ),
         }

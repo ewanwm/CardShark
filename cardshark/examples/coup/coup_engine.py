@@ -17,8 +17,8 @@ from cardshark import engine
 from cardshark.cards import Deck
 
 # coup specific stuff
-from examples.coup import coup_player
-from examples.coup import coup_cards
+from cardshark.examples.coup import coup_player
+from cardshark.examples.coup import coup_cards
 
 
 ## number of cards dealt to each player

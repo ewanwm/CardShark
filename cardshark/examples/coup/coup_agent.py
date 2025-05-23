@@ -8,7 +8,7 @@ import numpy as np
 
 # CardShark stuff
 from cardshark.agent import HumanAgent
-from examples.coup import coup_engine
+from cardshark.examples.coup import coup_engine
 
 
 GRAY = "\u001b[30;1m"
