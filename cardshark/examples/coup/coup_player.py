@@ -147,9 +147,9 @@ class CoupPlayer(engine.Player):
         full=False,
     ):
         """Get the "observation" of this player
-        
+
         i.e. what another player should see when observing this one.
-        full: whether to print the "full" information about this player. 
+        full: whether to print the "full" information about this player.
             If true then print all cards held by the player.
         """
 

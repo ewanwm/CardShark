@@ -1,5 +1,4 @@
-"""Describe the cards used in Coup game
-"""
+"""Describe the cards used in Coup game"""
 
 from enum import Enum
 from cardshark import logging as log

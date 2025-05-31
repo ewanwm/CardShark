@@ -17,7 +17,7 @@ class Deck:
 
     The actual objects it holds can be whatever you want. Can be simple strings,
     dictionaries or even whole classes, it's totally up to you!
-    
+
     """
 
     def __init__(self, cards: typing.Union[list, dict], name="Deck"):
@@ -40,19 +40,18 @@ class Deck:
 
     def reset(self):
         """Reset the deck
-        
+
         Reset the internal list of card objects to what it was when the deck was instantiated
         """
         self._cards = list(self._init_cards)
 
     def shuffle(self):
-        """Shuffle the order of the cards in the deck
-        """
+        """Shuffle the order of the cards in the deck"""
         random.shuffle(self._cards)
 
     def draw(self):
         """Draw a card from the top of the deck
-        
+
         Removes the card from the deck and returns it.
         If the deck has no more cards in it, will return None.
         """
@@ -66,8 +65,7 @@ class Deck:
         return last_card
 
     def add_card(self, card_name):
-        """Add a card to the top of this deck
-        """
+        """Add a card to the top of this deck"""
         self._cards.append(card_name)
 
     def __str__(self):

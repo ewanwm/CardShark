@@ -5,7 +5,7 @@ each one can have it's own logging level. These can be attached to individual
 objects in the engine and allows each of them to log their own messages to different
 locations and with different levels of detail.
 
-There is also a global "main_logger" for more general messages, or ones which don't 
+There is also a global "main_logger" for more general messages, or ones which don't
 make sense to attach to a single object (e.g. to note creation or deletion of loggers,
 to log messages in top level functions etc.).
 
@@ -15,15 +15,17 @@ The verbosity levels are defined by the LogLevel enum class.
 from enum import Enum
 import datetime
 
+
 class LogLevel(Enum):
-    """Possible log levels for Logger objects
-    """
+    """Possible log levels for Logger objects"""
+
     SILENT = 0
     ERROR = 1
     WARNING = 2
     INFO = 3
     DEBUG = 4
     TRACE = 5
+
 
 ## set global default log level
 LOG_LEVEL = LogLevel.TRACE
@@ -36,10 +38,10 @@ class Logger:
 
     Args:
         log_level (LogLevel):
-            Specifies the level that this logger will log at. Will only print messages whose 
+            Specifies the level that this logger will log at. Will only print messages whose
             minimum level is above this value.
         name (str):
-            The name of this logger, allows to more easily tell where the log message is 
+            The name of this logger, allows to more easily tell where the log message is
             coming from.
         to_file (bool):
             Whether to log messages to a file or to stdout.
@@ -92,7 +94,6 @@ class Logger:
         )
 
     def _log(self, message_type: str, min_level: LogLevel, *messages, indent=0):
-
         # if log level below min value then dont log nothin'
         if self._log_level.value < min_level.value:
             return
@@ -109,14 +110,12 @@ class Logger:
             print(indent_str + self._format(message_type), *messages)
 
     def set_log_level(self, level: LogLevel) -> None:
-        """Set the log_level of this Logger
-        """
+        """Set the log_level of this Logger"""
 
         self._log_level = level
 
     def get_log_level(self) -> LogLevel:
-        """Get the log_level of this Logger
-        """
+        """Get the log_level of this Logger"""
 
         return self._log_level
 

@@ -3,11 +3,11 @@
 These can either be human players, represented by the HumanAgent class,
 or machine learning based agents represented by the MultiAgent class.
 Within the CardShark engine, agents are in charge of keeping track of
-their previous performance and, in the case of ML based agents, their 
+their previous performance and, in the case of ML based agents, their
 own training data. They are also in charge of performing their own training
 using that data.
 
-You can also use the AgentBase class to implement your own agent classes 
+You can also use the AgentBase class to implement your own agent classes
 if needed.
 """
 
@@ -16,6 +16,7 @@ from abc import ABC, abstractmethod
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import typing
 
 # TF stuff
 from tensorflow import function as tfFunction
@@ -50,29 +51,25 @@ class AgentBase(NamedObject, ABC):
 
     def _register_outcome(self, outcome: int):
         """Add outcome to internal running list of game outcomes
-         
+
         (-1 for loss, 0 for inconclusive (game truncated), and +1 for win)
         """
         self._game_outcomes.append(outcome)
 
     def register_win(self):
-        """Register that the agent won a game
-        """
+        """Register that the agent won a game"""
         self._register_outcome(+1)
 
     def register_loss(self):
-        """Register that the agent lost a game
-        """
+        """Register that the agent lost a game"""
         self._register_outcome(-1)
 
     def register_inconclusive(self):
-        """Register that the agent took part in a game that ended inconclusively
-        """
+        """Register that the agent took part in a game that ended inconclusively"""
         self._register_outcome(0)
 
     def get_win_rate(self) -> float:
-        """Get the fraction of games this agent has won over the total number played
-        """
+        """Get the fraction of games this agent has won over the total number played"""
 
         # shortcut for agent that hasn't played any games yet
         if len(self._game_outcomes) == 0:
@@ -136,7 +133,7 @@ class HumanAgent(AgentBase, ABC):
 
 class MultiAgent(AgentBase):
     """Machine learning agent that is to be used in multi-agent environments
-    
+
     Keeps track of it's own training data and outcomes of played games.
     """
 
@@ -247,36 +244,32 @@ class MultiAgent(AgentBase):
 
     @tfFunction
     def _random_action(self, time_step):
-        """Get a random action
-        """
+        """Get a random action"""
         return self.random_policy.action(time_step)
 
     @tfFunction
     def _collect_action(self, time_step):
-        """Get an action decided by the agents collect policy
-        """
+        """Get an action decided by the agents collect policy"""
         return self._agent.collect_policy.action(time_step)
 
     @tfFunction
     def _inference_action(self, time_step):
-        """Get an action decided using the agents trained policy
-        """
+        """Get an action decided using the agents trained policy"""
         return self._agent.policy.action(time_step)
 
     def save_checkpoint(self):
         """Save a checkpoint of the agents internal training state
 
         This includes the model parameters, training state etc.
-        
-        TODO: make a subclass of the tfagent we want to use which has all internal 
-        variables defined as TF variables so the whole thing can be saved to a 
+
+        TODO: make a subclass of the tfagent we want to use which has all internal
+        variables defined as TF variables so the whole thing can be saved to a
         checkpoint maybe?
         """
         self._train_checkpointer.save(self._step)
 
     def load_checkpoint(self):
-        """Load agents internal state from checkpoint
-        """
+        """Load agents internal state from checkpoint"""
         self._train_checkpointer.initialize_or_restore()
 
     ## Function to extract the observations and mask values to pass to the model
@@ -331,7 +324,7 @@ class MultiAgent(AgentBase):
         """Add the currently stored trajectory to the agents training experience buffer
 
         The trajectory describes the transition from the last registered environment step
-        to the current one and the action the agent took to get here. 
+        to the current one and the action the agent took to get here.
         """
         if (
             (self.last_step is not None)
@@ -367,16 +360,14 @@ class MultiAgent(AgentBase):
         return train_loss
 
     def train_agent(self):
-        """Run an iteration of the training algorithm using experience gained by the agent so far
-        """
+        """Run an iteration of the training algorithm using experience gained by the agent so far"""
         loss = self._train_agent()
         self.losses.append(loss)
 
         return loss
 
     def plot_training_losses(self):
-        """Make a plot of the training losses achieved by this agent so far
-        """
+        """Make a plot of the training losses achieved by this agent so far"""
         plt.plot(list(range(len(self.losses))), self.losses)
         plt.title(self.name + " Losses")
         plt.xlabel("Epoch")
@@ -384,8 +375,7 @@ class MultiAgent(AgentBase):
         plt.show()
 
     def plot_rewards(self):
-        """Make a plot of the rewards gained by this agent so far
-        """
+        """Make a plot of the rewards gained by this agent so far"""
         plt.plot(list(range(len(self._rewards))), self._rewards)
         plt.title(self.name + " Rewards")
         plt.xlabel("Step")

@@ -1,14 +1,14 @@
 """This module contains the objects used to describe games
 
-CardShark uses a state pattern to model games. To implement a new 
+CardShark uses a state pattern to model games. To implement a new
 game you will need to implement a game class derived from Game which
-describes the overall state of the game. 
+describes the overall state of the game.
 
-The actual gameplay is handled by State objects. Each part of 
+The actual gameplay is handled by State objects. Each part of
 your game should be modelled using classes that derive from State.
 They should implement the State.handle() method to take in an action
 and advance the state of your Game. They should then return another
-(or the same) state object which tells the engine what the next 
+(or the same) state object which tells the engine what the next
 state will be.
 
 The Player class represents a player within your game. You should
@@ -32,9 +32,10 @@ from tf_agents.trajectories import time_step as ts
 # other cardshark stuff
 from cardshark.named_object import NamedObject
 
+
 class ActionSpace(NamedObject):
     """Describes the action space of a Game environment
-    
+
     Contains the names of the actions, the limits of the space for each action, and the tensorflow
     action spec needed when constructing TF agents.
 
@@ -48,7 +49,6 @@ class ActionSpace(NamedObject):
     """
 
     def __init__(self, spec: typing.Dict[str, typing.Tuple[int]], **kwargs):
-
         super().__init__(**kwargs)
 
         self.action_names: typing.List[str] = []
@@ -56,7 +56,11 @@ class ActionSpace(NamedObject):
         self.action_max: np.ndarray = np.zeros((len(spec.items())))
 
         for i, (name, limits) in enumerate(spec.items()):
-            assert len(limits) == 2, "limits for action " + name + " are the wrong length, should be (min, max)"
+            assert len(limits) == 2, (
+                "limits for action "
+                + name
+                + " are the wrong length, should be (min, max)"
+            )
 
             self.action_names.append(name)
             self.action_min[i] = limits[0]
@@ -68,11 +72,10 @@ class ActionSpace(NamedObject):
         self._tf_spec = BoundedArraySpec(
             minimum=self.action_min,
             maximum=self.action_max,
-            shape=(len(self.action_names), ),
+            shape=(len(self.action_names),),
             dtype=np.int32,
         )
 
-    
     def unravel(self):
         """Unravel the action space of the environment
 
@@ -94,9 +97,7 @@ class ActionSpace(NamedObject):
 
         self.debug("  Taking cartesian product of:", to_product)
 
-        self._unravelled_action_space = np.array(
-            list(itertools.product(*to_product))
-        )
+        self._unravelled_action_space = np.array(list(itertools.product(*to_product)))
 
         self.debug("  Unravelled action space:", self._unravelled_action_space)
         self.debug("  Number of possible actions:", len(self._unravelled_action_space))
@@ -107,6 +108,7 @@ class ActionSpace(NamedObject):
             shape=(),
             dtype=np.int32,
         )
+
 
 class ObservationSpace(NamedObject):
     """Describes the observation space of a Game environment
@@ -121,23 +123,24 @@ class ObservationSpace(NamedObject):
         _tf_spec (tf_agents.specs.BoundedArraySpec): The tensorflow observation spec used when
         constructing agents and the underlying gym environments
     """
-    
-    def __init__(
-            self, 
-            min: np.ndarray, 
-            max: np.ndarray, 
-            action_space: ActionSpace, 
-            n_players: int, 
-            names: typing.List[typing.List[str]] = None, 
-            **kwargs
-        ):
 
+    def __init__(
+        self,
+        min: np.ndarray,
+        max: np.ndarray,
+        action_space: ActionSpace,
+        n_players: int,
+        names: typing.List[typing.List[str]] = None,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
 
         assert min.shape == max.shape, "Min and Max arrays must have matching shapes"
 
         if names is not None:
-            assert len(names) == len(min.shape), "Name list shape does not match array shape"
+            assert len(names) == len(min.shape), (
+                "Name list shape does not match array shape"
+            )
 
         self.observation_names: typing.List[typing.List[str]] = names
         self.observation_min: np.ndarray = min
@@ -157,7 +160,9 @@ class ObservationSpace(NamedObject):
             "mask": BoundedArraySpec(
                 minimum=0,
                 maximum=1,
-                shape=(action_space._tf_spec.maximum - action_space._tf_spec.minimum + 1,),
+                shape=(
+                    action_space._tf_spec.maximum - action_space._tf_spec.minimum + 1,
+                ),
                 dtype=np.int32,
                 name="mask",
             ),
@@ -171,12 +176,10 @@ class ObservationSpace(NamedObject):
         }
 
 
-
-
 class Game(py_environment.PyEnvironment, NamedObject, ABC):
     """Base class for user defined Games
 
-    This should describe the state of the game. You'll need to implement 
+    This should describe the state of the game. You'll need to implement
     the following methods for your game:
 
         - _reset_game()
@@ -212,7 +215,7 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
     @abstractmethod
     def _reset_game(self):
         """Reset the Game back to "factory settings"
-        
+
         Will get called when starting a new game, and in the
         Game initialiser. You should reset any instance variables that
         you use in describing your game environment here.
@@ -221,23 +224,22 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
     @abstractmethod
     def _check_status(self) -> bool:
         """Check the current status of the Game
-        
+
         This should return True when your game is totally finished
         and False otherwise
         """
 
     @abstractmethod
     def _get_mask(self, action: np.ndarray, player_id: int) -> np.array:
-        """Should return True if the provided action is allowed and False otherwise
-        """
+        """Should return True if the provided action is allowed and False otherwise"""
 
     @abstractmethod
     def _get_observation(self, player_id: int) -> np.ndarray:
         """Get the observation representing the current state of the game
-        
+
         This will be passed to the reinforcement learning agents and
-        allow them to assess the current situation and decide what 
-        action to take. The format of the observation should fit with what 
+        allow them to assess the current situation and decide what
+        action to take. The format of the observation should fit with what
         was previously defined for this Game.
         """
 
@@ -257,11 +259,13 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
                 "activePlayer": self.get_active_player(),
             }
         )
-    
+
     def get_mask(self, player_id: int):
         """Get the mask values for all possible actions using the user defined _get_mask()"""
 
-        mask = np.zeros((self._action_space._unravelled_action_space.shape[0]), dtype=np.int32)
+        mask = np.zeros(
+            (self._action_space._unravelled_action_space.shape[0]), dtype=np.int32
+        )
 
         for action_id, action in enumerate(self._action_space._unravelled_action_space):
             if self._get_mask(action, player_id):
@@ -282,31 +286,40 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
           should be the name of the action. Values should be tuple of (min, max) possible
           values for the action
         """
-        
-        self._action_space = ActionSpace(spec, name = self.name + "_ActionSpec", logger = self.logger)
-        
+
+        self._action_space = ActionSpace(
+            spec, name=self.name + "_ActionSpec", logger=self.logger
+        )
+
         if self._unravel_action_space:
             self._action_space.unravel()
 
-    def set_observation_spec(self, min: np.ndarray, max: np.ndarray, names: typing.List[typing.List[str]] = None) -> None:
+    def set_observation_spec(
+        self,
+        min: np.ndarray,
+        max: np.ndarray,
+        names: typing.List[typing.List[str]] = None,
+    ) -> None:
         """Use this to describe the shape of the observations for agents playing your game
-        
+
         Args:
             min (numpy.ndarray): Array describing the minimum values of the observation array
             max (numpy.ndarray): Array describing the maximum values of the observation array
-            names (list of list of str): 
+            names (list of list of str):
         """
 
-        assert self._action_space is not None, "You need to call set_action_spec() before calling set_observation_spec()"
-    
+        assert self._action_space is not None, (
+            "You need to call set_action_spec() before calling set_observation_spec()"
+        )
+
         self._observation_space = ObservationSpace(
-            min, 
-            max, 
-            self._action_space, 
-            self.n_players, 
-            names, 
-            name = self.name + "_ObservationSpace", 
-            logger = self.logger
+            min,
+            max,
+            self._action_space,
+            self.n_players,
+            names,
+            name=self.name + "_ObservationSpace",
+            logger=self.logger,
         )
 
     ## for returning general info about the environment, not things necessarily
@@ -328,10 +341,10 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
         """Get the observation specification for the environment associated with this Game
 
         This is a dictionary with entries:
-            - "observations": the ArraySpec describing the observations returned by 
+            - "observations": the ArraySpec describing the observations returned by
             the environment.
             - "mask":         the ArraySpec describing the mask returned by the environment.
-            - "activePlayer": ArraySpec describing the part of the observation that 
+            - "activePlayer": ArraySpec describing the part of the observation that
             tells which player is active
         """
         return self._observation_space._tf_spec
@@ -353,13 +366,11 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
         )
 
     def get_active_player(self) -> int:
-        """Get the index of the currently active player
-        """
+        """Get the index of the currently active player"""
         return self._active_player
 
     def set_active_player(self, player_id: int) -> None:
-        """Set the currently active player using their index
-        """
+        """Set the currently active player using their index"""
         if player_id > len(self.player_list):
             raise ValueError("Index too high! There aren't that many players!")
         if player_id < 0:
@@ -369,8 +380,8 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
 
     def check_status(self) -> bool:
         """Check the current status of the game. If finished move to reward state
-        
-        Checks the current state of the game using the user implemented 
+
+        Checks the current state of the game using the user implemented
         _check_status() method. If it returns True then move to the reward
         state and return true. If game is already in the reward state, stay there
         and return True. Otherwise do nothing and return False.
@@ -389,7 +400,7 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
             return True
 
         return False
-    
+
     def skipped_turn(self) -> None:
         """Use this to inform the game that the last players turn was skipped
 
@@ -397,7 +408,7 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
         inform them to disregard the skipped turn when training as it won't provide
         them any useful information and might confuse their training algorithm.
         """
-        
+
         self._info["skippingTurn"] = True
 
     def _step(self, action: np.ndarray) -> None:
@@ -479,7 +490,7 @@ class GameState(ABC):
     """Abstract base class representing a game state
 
     Users should derive states from this object when implementing a game.
-    Will need to implement a handle() method which should perform actions 
+    Will need to implement a handle() method which should perform actions
     specified by a player.
     """
 
@@ -487,8 +498,8 @@ class GameState(ABC):
     @abstractmethod
     def handle(action: np.ndarray, game: Game):
         """Handle the action
-        
-        should advance the state of the Game object based 
+
+        should advance the state of the Game object based
         on the provided action array.
         """
 
@@ -497,9 +508,10 @@ class GameState(ABC):
     def name() -> str:
         """The name of this state, use for logging"""
 
+
 class RewardState(GameState):
-    """Special game state which occurs at the end of play 
-    
+    """Special game state which occurs at the end of play
+
     Go through all players and hand out final rewards.
     """
 
@@ -536,7 +548,7 @@ class TerminatedState(GameState):
 class Player(NamedObject, ABC):
     """The base class representing a player in a Game to be implemented by the user
 
-    You should use the give_reward() method within your Game object to reward the player 
+    You should use the give_reward() method within your Game object to reward the player
     (and thus the Agent that is embodying that Player) which will inform the reinforcement
     learning process when Agents are trying to learn to play your game.
     """
@@ -550,39 +562,36 @@ class Player(NamedObject, ABC):
 
     @abstractmethod
     def reset(self):
-        """Reset this player back to "factory settings" 
+        """Reset this player back to "factory settings"
 
-        Should be implemented by the user and should reset all the stuff you've 
-        done in the course of running a game. This will typically be called 
-        when instantiating and when resetting a Game object. Also called in the 
+        Should be implemented by the user and should reset all the stuff you've
+        done in the course of running a game. This will typically be called
+        when instantiating and when resetting a Game object. Also called in the
         __init__() method of Player.
         """
 
     def give_reward(self, reward: float) -> None:
-        """Give reward to this player for a job well done
-        """
+        """Give reward to this player for a job well done"""
 
         self.debug("Giving reward:", reward)
         self._reward_accum += reward
         self.debug("  Reward after:", self._reward_accum)
 
     def claim_reward(self) -> float:
-        """Get the total reward given to this player until now and set it's reward back to 0
-        """
+        """Get the total reward given to this player until now and set it's reward back to 0"""
         self.debug("Claiming reward:", self._reward_accum)
         ret = self._reward_accum
         self._reward_accum = 0.0
         return ret
 
     def check_reward(self) -> float:
-        """Check the reward that this player has accumulated but without resetting it to 0
-        """
+        """Check the reward that this player has accumulated but without resetting it to 0"""
         return self._reward_accum
 
     def get_info_str(self) -> str:
         """Can overwrite this to provide a string that gives information about this Player
-        
-        This will then be used in some debug printouts and can give some help when trying 
+
+        This will then be used in some debug printouts and can give some help when trying
         to debug user code.
         """
         return ""
