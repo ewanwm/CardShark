@@ -329,7 +329,7 @@ class CoupGame(engine.Game):
                 if player.is_alive:
                     self.info("")
                     self.info("  ** Player " + player.name + " Wins! **")
-                    self._winner = player_id
+                    self.set_winner(player_id)
                     player.give_reward(50)
 
                     return True

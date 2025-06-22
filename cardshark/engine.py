@@ -347,13 +347,11 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
             logger=self.logger,
         )
 
-    ## for returning general info about the environment, not things necessarily
-    ## needed by agents as observations.
-    ## TODO: This should be automated. should construct the _info dict from info
-    ## set by the user, should add helper fns like set_winner(), skip_turn()...
-    ## TODO: Add a give_reward() to Game that keeps track of the reward issued
-    ## this turn so it can be added to the _info and user doesn't have to
-    ## set this manually
+    def set_winner(self, winner:int) -> None:
+        """Set the winner of the current game"""
+
+        self._winner = winner
+
     def get_info(self) -> typing.Dict:
         """Get information about the state of the game
 

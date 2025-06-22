@@ -85,9 +85,6 @@ class Logger:
 
         Logger.nLoggers += 1
 
-    def __delete__(self):
-        return
-
     def _format(self, message_type):
         return f"[{message_type}]-[{datetime.datetime.now()}]-[{self.name}]:"
 

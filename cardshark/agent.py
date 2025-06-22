@@ -14,7 +14,6 @@ if needed.
 # python stuff
 from abc import ABC, abstractmethod
 import os
-import typing
 
 # numpy stuff
 import numpy as np
