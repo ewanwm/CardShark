@@ -14,9 +14,11 @@ if needed.
 # python stuff
 from abc import ABC, abstractmethod
 import os
+import typing
+
+# numpy stuff
 import numpy as np
 import matplotlib.pyplot as plt
-import typing
 
 # TF stuff
 from tensorflow import function as tfFunction

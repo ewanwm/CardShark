@@ -89,9 +89,7 @@ class Logger:
         return
 
     def _format(self, message_type):
-        return "[{type}]-[{time}]-[{name}]:".format(
-            type=message_type, time=datetime.datetime.now(), name=self.name
-        )
+        return f"[{message_type}]-[{datetime.datetime.now()}]-[{self.name}]:"
 
     def _log(self, message_type: str, min_level: LogLevel, *messages, indent=0):
         # if log level below min value then dont log nothin'

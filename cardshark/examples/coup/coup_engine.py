@@ -115,7 +115,7 @@ class CoupGame(engine.Game):
         ]
 
         self.set_observation_spec(
-            min=obs_spec_min, max=obs_spec_max, names=[player_names, obs_names]
+            min_vals=obs_spec_min, max_vals=obs_spec_max, names=[player_names, obs_names]
         )
 
         ## initialise the players
