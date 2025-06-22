@@ -2,7 +2,7 @@
 # This is a basic workflow make doxygen documentation 
 # every time develop is updated
 
-name: Doxygen
+name: Documentation
 
 # Controls when the workflow will run
 on:
@@ -40,7 +40,6 @@ jobs:
           pip install .
           pip install --upgrade pip
           pip install sphinx
-          pip install sphinx-autodoc
           
           sphinx-build -M html doc/source doc/build
   
