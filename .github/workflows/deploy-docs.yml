@@ -7,9 +7,9 @@ name: Documentation
 # Controls when the workflow will run
 on:
   # Triggers the workflow on push or pull request events 
-  # but only for the develop branch
+  # but only for the main branch
   push:
-    branches: [develop]
+    branches: [main]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -40,6 +40,7 @@ jobs:
           pip install .
           pip install --upgrade pip
           pip install sphinx
+          pip install sphinx-rtd-theme
           
           sphinx-build -M html doc/source doc/build
   
