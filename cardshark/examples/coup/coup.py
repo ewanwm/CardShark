@@ -5,14 +5,14 @@ import typing
 from cardshark import logging as log
 
 from cardshark.examples.coup import coup_engine, coup_agent
-from cardshark.ui import UIManagerBase, UIStateBase
+from cardshark.ui import UIManager, UIStateBase
 
 import pygame
 import pygame_gui
 
 class CoupUIGameState(UIStateBase):
 
-    def __init__(self, manager:'CoupUIManager'):
+    def __init__(self, manager:'UIManager'):
         super().__init__(manager)
 
         self.main_menu_button = pygame_gui.elements.UIButton(
@@ -42,7 +42,7 @@ class CoupUIGameState(UIStateBase):
 
 class CoupUIStstartMenuState(UIStateBase):
 
-    def __init__(self, manager:'CoupUIManager'):
+    def __init__(self, manager:'UIManager'):
         super().__init__(manager)
 
         self.start_game_button = pygame_gui.elements.UIButton(
@@ -83,14 +83,10 @@ class CoupUIStstartMenuState(UIStateBase):
         return CoupUIStstartMenuState, False
 
 
-class CoupUIManager(UIManagerBase):
-
-    def __init__(self):
-
-        super().__init__(name="Coup", shape=(800, 600), theme_path="coup_ui_theme.json")
-
-        self.current_state = CoupUIStstartMenuState(self)
-
-
-ui_man = CoupUIManager()
+ui_man = UIManager(
+    CoupUIStstartMenuState,
+    name="coup",
+    shape = (800, 600),
+    theme_path="coup_ui_theme.json"
+)
 ui_man.run()

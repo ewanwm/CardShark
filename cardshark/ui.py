@@ -77,12 +77,12 @@ class UIStateBase(ABC):
 
     instance = None
 
-    def __init__(self, manager:'UIManagerBase'):
+    def __init__(self, manager:'UIManager'):
         self.ui_manager = manager
         self.window_surface = manager.window_surface
 
     @classmethod
-    def get(cls, manager:'UIManagerBase'):
+    def get(cls, manager:'UIManager'):
         if cls.instance is None:
             print(f"setting new instance for {cls.__name__}")
             cls.instance = cls(manager)        
@@ -91,7 +91,7 @@ class UIStateBase(ABC):
         
     @staticmethod
     @abstractmethod  
-    def draw(self, manager:'UIManagerBase'):
+    def draw(self, manager:'UIManager'):
         """Draw the UI for this state: buttons, game board etc."""
 
     @staticmethod
@@ -128,9 +128,27 @@ class UIStateBase(ABC):
 
 
 
-class UIManagerBase(ABC):
+class UIManager:
+    """Handles the running of the UI
 
-    def __init__(self, shape:tuple[int], theme_path:str, name:str="Game"):
+    To run your UI, instantialte a UIManager object, passing it an initial UI state, derived from UIStateBase
+    which acts as a kind of entry point for your UI. Usually this would be some sort of "start menu" state.
+    Then call the `run()` method.
+
+    A complete example, using the same UIStstartMenuState from before would be
+    
+    ui_man = UIManager(
+        initial_state = UIStstartMenuState,
+        name="my_game",
+        shape = (800, 600),
+        theme_path="my_ui_theme.json"
+    )
+
+    ui_man.run()
+
+"""
+
+    def __init__(self, initial_state:UIStateBase, shape:tuple[int], theme_path:str, name:str="Game"):
 
         pygame.init()
 
@@ -145,7 +163,7 @@ class UIManagerBase(ABC):
 
         self.is_running = True
 
-        self.current_state = None
+        self.current_state = initial_state(self)
 
     
     def get_pgui_manager(self):
