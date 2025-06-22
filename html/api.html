@@ -1,0 +1,703 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CardShark API &mdash; CardShark 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="CardShark documentation" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            CardShark
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">CardShark API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-cardshark.engine">Engine</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#cardshark.engine.ActionSpace"><code class="docutils literal notranslate"><span class="pre">ActionSpace</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.engine.ActionSpace.unravel"><code class="docutils literal notranslate"><span class="pre">ActionSpace.unravel()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#cardshark.engine.Game"><code class="docutils literal notranslate"><span class="pre">Game</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.engine.Game.action_spec"><code class="docutils literal notranslate"><span class="pre">Game.action_spec()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.engine.Game.check_status"><code class="docutils literal notranslate"><span class="pre">Game.check_status()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.engine.Game.flatten_action"><code class="docutils literal notranslate"><span class="pre">Game.flatten_action()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.engine.Game.get_active_player"><code class="docutils literal notranslate"><span class="pre">Game.get_active_player()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.engine.Game.get_info"><code class="docutils literal notranslate"><span class="pre">Game.get_info()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.engine.Game.get_mask"><code class="docutils literal notranslate"><span class="pre">Game.get_mask()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.engine.Game.observation_spec"><code class="docutils literal notranslate"><span class="pre">Game.observation_spec()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.engine.Game.set_action_spec"><code class="docutils literal notranslate"><span class="pre">Game.set_action_spec()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.engine.Game.set_active_player"><code class="docutils literal notranslate"><span class="pre">Game.set_active_player()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.engine.Game.set_observation_spec"><code class="docutils literal notranslate"><span class="pre">Game.set_observation_spec()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.engine.Game.skipped_turn"><code class="docutils literal notranslate"><span class="pre">Game.skipped_turn()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#cardshark.engine.GameState"><code class="docutils literal notranslate"><span class="pre">GameState</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.engine.GameState.handle"><code class="docutils literal notranslate"><span class="pre">GameState.handle()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.engine.GameState.name"><code class="docutils literal notranslate"><span class="pre">GameState.name()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#cardshark.engine.ObservationSpace"><code class="docutils literal notranslate"><span class="pre">ObservationSpace</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cardshark.engine.Player"><code class="docutils literal notranslate"><span class="pre">Player</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.engine.Player.check_reward"><code class="docutils literal notranslate"><span class="pre">Player.check_reward()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.engine.Player.claim_reward"><code class="docutils literal notranslate"><span class="pre">Player.claim_reward()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.engine.Player.get_info_str"><code class="docutils literal notranslate"><span class="pre">Player.get_info_str()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.engine.Player.give_reward"><code class="docutils literal notranslate"><span class="pre">Player.give_reward()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.engine.Player.reset"><code class="docutils literal notranslate"><span class="pre">Player.reset()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#cardshark.engine.RewardState"><code class="docutils literal notranslate"><span class="pre">RewardState</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.engine.RewardState.handle"><code class="docutils literal notranslate"><span class="pre">RewardState.handle()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.engine.RewardState.name"><code class="docutils literal notranslate"><span class="pre">RewardState.name()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#cardshark.engine.TerminatedState"><code class="docutils literal notranslate"><span class="pre">TerminatedState</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.engine.TerminatedState.handle"><code class="docutils literal notranslate"><span class="pre">TerminatedState.handle()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.engine.TerminatedState.name"><code class="docutils literal notranslate"><span class="pre">TerminatedState.name()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-cardshark.agent">Agent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#cardshark.agent.AgentBase"><code class="docutils literal notranslate"><span class="pre">AgentBase</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.agent.AgentBase.get_action"><code class="docutils literal notranslate"><span class="pre">AgentBase.get_action()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.agent.AgentBase.get_win_rate"><code class="docutils literal notranslate"><span class="pre">AgentBase.get_win_rate()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.agent.AgentBase.register_inconclusive"><code class="docutils literal notranslate"><span class="pre">AgentBase.register_inconclusive()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.agent.AgentBase.register_loss"><code class="docutils literal notranslate"><span class="pre">AgentBase.register_loss()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.agent.AgentBase.register_win"><code class="docutils literal notranslate"><span class="pre">AgentBase.register_win()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#cardshark.agent.HumanAgent"><code class="docutils literal notranslate"><span class="pre">HumanAgent</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.agent.HumanAgent.get_action"><code class="docutils literal notranslate"><span class="pre">HumanAgent.get_action()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.agent.HumanAgent.register_game"><code class="docutils literal notranslate"><span class="pre">HumanAgent.register_game()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#cardshark.agent.MultiAgent"><code class="docutils literal notranslate"><span class="pre">MultiAgent</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.agent.MultiAgent.add_frame"><code class="docutils literal notranslate"><span class="pre">MultiAgent.add_frame()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.agent.MultiAgent.get_action"><code class="docutils literal notranslate"><span class="pre">MultiAgent.get_action()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.agent.MultiAgent.load_checkpoint"><code class="docutils literal notranslate"><span class="pre">MultiAgent.load_checkpoint()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.agent.MultiAgent.plot_rewards"><code class="docutils literal notranslate"><span class="pre">MultiAgent.plot_rewards()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.agent.MultiAgent.plot_training_losses"><code class="docutils literal notranslate"><span class="pre">MultiAgent.plot_training_losses()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.agent.MultiAgent.save_checkpoint"><code class="docutils literal notranslate"><span class="pre">MultiAgent.save_checkpoint()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.agent.MultiAgent.train_agent"><code class="docutils literal notranslate"><span class="pre">MultiAgent.train_agent()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-cardshark.cards">Cards</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#cardshark.cards.Deck"><code class="docutils literal notranslate"><span class="pre">Deck</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.cards.Deck.add_card"><code class="docutils literal notranslate"><span class="pre">Deck.add_card()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.cards.Deck.draw"><code class="docutils literal notranslate"><span class="pre">Deck.draw()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.cards.Deck.reset"><code class="docutils literal notranslate"><span class="pre">Deck.reset()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.cards.Deck.shuffle"><code class="docutils literal notranslate"><span class="pre">Deck.shuffle()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-cardshark.named_object">Base</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#cardshark.named_object.NamedObject"><code class="docutils literal notranslate"><span class="pre">NamedObject</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.named_object.NamedObject.debug"><code class="docutils literal notranslate"><span class="pre">NamedObject.debug()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.named_object.NamedObject.error"><code class="docutils literal notranslate"><span class="pre">NamedObject.error()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.named_object.NamedObject.info"><code class="docutils literal notranslate"><span class="pre">NamedObject.info()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.named_object.NamedObject.trace"><code class="docutils literal notranslate"><span class="pre">NamedObject.trace()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cardshark.named_object.NamedObject.warn"><code class="docutils literal notranslate"><span class="pre">NamedObject.warn()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">CardShark</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">CardShark API</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/api.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="cardshark-api">
+<h1>CardShark API<a class="headerlink" href="#cardshark-api" title="Link to this heading"></a></h1>
+<section id="module-cardshark.engine">
+<span id="engine"></span><h2>Engine<a class="headerlink" href="#module-cardshark.engine" title="Link to this heading"></a></h2>
+<p>This module contains the objects used to describe games</p>
+<p>CardShark uses a state pattern to model games. To implement a new
+game you will need to implement a game class derived from Game which
+describes the overall state of the game.</p>
+<p>The actual gameplay is handled by State objects. Each part of
+your game should be modelled using classes that derive from State.
+They should implement the State.handle() method to take in an action
+and advance the state of your Game. They should then return another
+(or the same) state object which tells the engine what the next
+state will be.</p>
+<p>The Player class represents a player within your game. You should
+implement your own player classes derived from this for your specific
+purposes.</p>
+<p>A very simple example could be … TODO: write this</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="cardshark.engine.ActionSpace">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cardshark.engine.</span></span><span class="sig-name descname"><span class="pre">ActionSpace</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spec</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.engine.ActionSpace" title="Link to this definition"></a></dt>
+<dd><p>Describes the action space of a Game environment</p>
+<p>Contains the names of the actions, the limits of the space for each action, and the tensorflow
+action spec needed when constructing TF agents.</p>
+<dl>
+<dt>Attributes:</dt><dd><p>action_names (list of str): The names of each action
+action_min (list of int): The minimum values each action can take
+action_max (list of int): The maximum values each action can take</p>
+<p>_tf_spec (tf_agents.specs.BoundedArraySpec): The tensorflow action spec used when
+constructing agents and the underlying gym environment</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.engine.ActionSpace.unravel">
+<span class="sig-name descname"><span class="pre">unravel</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.engine.ActionSpace.unravel" title="Link to this definition"></a></dt>
+<dd><p>Unravel the action space of the environment</p>
+<p>e.g. if the current action spec is an N by M multidimensional array of actions,
+this fn will transform the space into a one dimensional one of size M x N.
+The structure of the initial higher dimensional space will be stored in the
+_unravelled_action_space attribute. To get from the 1D action space back to the
+original space you can do:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">action</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unravelled_action_space</span><span class="p">[</span><span class="mi">1</span><span class="n">DactionID</span><span class="p">]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cardshark.engine.Game">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cardshark.engine.</span></span><span class="sig-name descname"><span class="pre">Game</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_players</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unravel_action_space</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_steps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.engine.Game" title="Link to this definition"></a></dt>
+<dd><p>Base class for user defined Games</p>
+<p>This should describe the state of the game. You’ll need to implement
+the following methods for your game:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>_reset_game()</p></li>
+<li><p>check_status()</p></li>
+<li><p>_get_mask()</p></li>
+<li><p>_get_observation()</p></li>
+</ul>
+</div></blockquote>
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.engine.Game.action_spec">
+<span class="sig-name descname"><span class="pre">action_spec</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">BoundedArraySpec</span></span></span><a class="headerlink" href="#cardshark.engine.Game.action_spec" title="Link to this definition"></a></dt>
+<dd><p>Get the action specification for the environment associated with this Game object</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.engine.Game.check_status">
+<span class="sig-name descname"><span class="pre">check_status</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#cardshark.engine.Game.check_status" title="Link to this definition"></a></dt>
+<dd><p>Check the current status of the game. If finished move to reward state</p>
+<p>Checks the current state of the game using the user implemented
+_check_status() method. If it returns True then move to the reward
+state and return true. If game is already in the reward state, stay there
+and return True. Otherwise do nothing and return False.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.engine.Game.flatten_action">
+<span class="sig-name descname"><span class="pre">flatten_action</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">action_ndim</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.engine.Game.flatten_action" title="Link to this definition"></a></dt>
+<dd><p>Take an N dimensional action array and find which 1d action index it corresponds to</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.engine.Game.get_active_player">
+<span class="sig-name descname"><span class="pre">get_active_player</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#cardshark.engine.Game.get_active_player" title="Link to this definition"></a></dt>
+<dd><p>Get the index of the currently active player</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.engine.Game.get_info">
+<span class="sig-name descname"><span class="pre">get_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span></span></span><a class="headerlink" href="#cardshark.engine.Game.get_info" title="Link to this definition"></a></dt>
+<dd><p>Get information about the state of the game</p>
+<p>This info</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.engine.Game.get_mask">
+<span class="sig-name descname"><span class="pre">get_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">player_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.engine.Game.get_mask" title="Link to this definition"></a></dt>
+<dd><p>Get the mask values for all possible actions using the user defined _get_mask()</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.engine.Game.observation_spec">
+<span class="sig-name descname"><span class="pre">observation_spec</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">BoundedArraySpec</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#cardshark.engine.Game.observation_spec" title="Link to this definition"></a></dt>
+<dd><p>Get the observation specification for the environment associated with this Game</p>
+<dl>
+<dt>This is a dictionary with entries:</dt><dd><ul class="simple">
+<li><p>“observations”: the ArraySpec describing the observations returned by</p></li>
+</ul>
+<p>the environment.
+- “mask”:         the ArraySpec describing the mask returned by the environment.
+- “activePlayer”: ArraySpec describing the part of the observation that
+tells which player is active</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.engine.Game.set_action_spec">
+<span class="sig-name descname"><span class="pre">set_action_spec</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spec</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#cardshark.engine.Game.set_action_spec" title="Link to this definition"></a></dt>
+<dd><p>Use this to describe the possible actions for agents playing your game</p>
+<p>Construct an ActionSpace from spec and assign it to the _action_space attribute.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>spec (dict of str: tuple of int): Dictionary describing the actions. Keys
+should be the name of the action. Values should be tuple of (min, max) possible
+values for the action</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.engine.Game.set_active_player">
+<span class="sig-name descname"><span class="pre">set_active_player</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">player_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#cardshark.engine.Game.set_active_player" title="Link to this definition"></a></dt>
+<dd><p>Set the currently active player using their index</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.engine.Game.set_observation_spec">
+<span class="sig-name descname"><span class="pre">set_observation_spec</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">min</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#cardshark.engine.Game.set_observation_spec" title="Link to this definition"></a></dt>
+<dd><p>Use this to describe the shape of the observations for agents playing your game</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>min (numpy.ndarray): Array describing the minimum values of the observation array
+max (numpy.ndarray): Array describing the maximum values of the observation array
+names (list of list of str):</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.engine.Game.skipped_turn">
+<span class="sig-name descname"><span class="pre">skipped_turn</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#cardshark.engine.Game.skipped_turn" title="Link to this definition"></a></dt>
+<dd><p>Use this to inform the game that the last players turn was skipped</p>
+<p>Not strictly necessary but can be helpful for training agents as it will
+inform them to disregard the skipped turn when training as it won’t provide
+them any useful information and might confuse their training algorithm.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cardshark.engine.GameState">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cardshark.engine.</span></span><span class="sig-name descname"><span class="pre">GameState</span></span><a class="headerlink" href="#cardshark.engine.GameState" title="Link to this definition"></a></dt>
+<dd><p>Abstract base class representing a game state</p>
+<p>Users should derive states from this object when implementing a game.
+Will need to implement a handle() method which should perform actions
+specified by a player.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.engine.GameState.handle">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">handle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">action</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">game</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cardshark.engine.Game" title="cardshark.engine.Game"><span class="pre">Game</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.engine.GameState.handle" title="Link to this definition"></a></dt>
+<dd><p>Handle the action</p>
+<p>should advance the state of the Game object based
+on the provided action array.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.engine.GameState.name">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#cardshark.engine.GameState.name" title="Link to this definition"></a></dt>
+<dd><p>The name of this state, use for logging</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cardshark.engine.ObservationSpace">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cardshark.engine.</span></span><span class="sig-name descname"><span class="pre">ObservationSpace</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">min</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">action_space</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cardshark.engine.ActionSpace" title="cardshark.engine.ActionSpace"><span class="pre">ActionSpace</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_players</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.engine.ObservationSpace" title="Link to this definition"></a></dt>
+<dd><p>Describes the observation space of a Game environment</p>
+<p>Contains limits on each observation, names of the observations and the ArraySpec
+needed for constructing tf agents and gym environment</p>
+<dl class="simple">
+<dt>Attributes:</dt><dd><p>observation_names (list of list of str): The names of each dimension of the space
+observation_min (numpy.array): The min values each observation can take
+observation_max (numpy.array): The max values each observation can take
+_tf_spec (tf_agents.specs.BoundedArraySpec): The tensorflow observation spec used when
+constructing agents and the underlying gym environments</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cardshark.engine.Player">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cardshark.engine.</span></span><span class="sig-name descname"><span class="pre">Player</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.engine.Player" title="Link to this definition"></a></dt>
+<dd><p>The base class representing a player in a Game to be implemented by the user</p>
+<p>You should use the give_reward() method within your Game object to reward the player
+(and thus the Agent that is embodying that Player) which will inform the reinforcement
+learning process when Agents are trying to learn to play your game.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.engine.Player.check_reward">
+<span class="sig-name descname"><span class="pre">check_reward</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#cardshark.engine.Player.check_reward" title="Link to this definition"></a></dt>
+<dd><p>Check the reward that this player has accumulated but without resetting it to 0</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.engine.Player.claim_reward">
+<span class="sig-name descname"><span class="pre">claim_reward</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#cardshark.engine.Player.claim_reward" title="Link to this definition"></a></dt>
+<dd><p>Get the total reward given to this player until now and set it’s reward back to 0</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.engine.Player.get_info_str">
+<span class="sig-name descname"><span class="pre">get_info_str</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#cardshark.engine.Player.get_info_str" title="Link to this definition"></a></dt>
+<dd><p>Can overwrite this to provide a string that gives information about this Player</p>
+<p>This will then be used in some debug printouts and can give some help when trying
+to debug user code.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.engine.Player.give_reward">
+<span class="sig-name descname"><span class="pre">give_reward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reward</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#cardshark.engine.Player.give_reward" title="Link to this definition"></a></dt>
+<dd><p>Give reward to this player for a job well done</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.engine.Player.reset">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">reset</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.engine.Player.reset" title="Link to this definition"></a></dt>
+<dd><p>Reset this player back to “factory settings”</p>
+<p>Should be implemented by the user and should reset all the stuff you’ve
+done in the course of running a game. This will typically be called
+when instantiating and when resetting a Game object. Also called in the
+__init__() method of Player.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cardshark.engine.RewardState">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cardshark.engine.</span></span><span class="sig-name descname"><span class="pre">RewardState</span></span><a class="headerlink" href="#cardshark.engine.RewardState" title="Link to this definition"></a></dt>
+<dd><p>Special game state which occurs at the end of play</p>
+<p>Go through all players and hand out final rewards.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.engine.RewardState.handle">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">handle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">action</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">game</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cardshark.engine.Game" title="cardshark.engine.Game"><span class="pre">Game</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#cardshark.engine.GameState" title="cardshark.engine.GameState"><span class="pre">GameState</span></a></span></span><a class="headerlink" href="#cardshark.engine.RewardState.handle" title="Link to this definition"></a></dt>
+<dd><p>Handle the action</p>
+<p>should advance the state of the Game object based
+on the provided action array.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.engine.RewardState.name">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#cardshark.engine.RewardState.name" title="Link to this definition"></a></dt>
+<dd><p>The name of this state, use for logging</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cardshark.engine.TerminatedState">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cardshark.engine.</span></span><span class="sig-name descname"><span class="pre">TerminatedState</span></span><a class="headerlink" href="#cardshark.engine.TerminatedState" title="Link to this definition"></a></dt>
+<dd><p>Special game state used to indicate that the game has been terminated</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.engine.TerminatedState.handle">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">handle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">action</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">game</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cardshark.engine.Game" title="cardshark.engine.Game"><span class="pre">Game</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#cardshark.engine.GameState" title="cardshark.engine.GameState"><span class="pre">GameState</span></a></span></span><a class="headerlink" href="#cardshark.engine.TerminatedState.handle" title="Link to this definition"></a></dt>
+<dd><p>Handle the action</p>
+<p>should advance the state of the Game object based
+on the provided action array.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.engine.TerminatedState.name">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#cardshark.engine.TerminatedState.name" title="Link to this definition"></a></dt>
+<dd><p>The name of this state, use for logging</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-cardshark.agent">
+<span id="agent"></span><h2>Agent<a class="headerlink" href="#module-cardshark.agent" title="Link to this heading"></a></h2>
+<p>Agents are “things that play games”.</p>
+<p>These can either be human players, represented by the HumanAgent class,
+or machine learning based agents represented by the MultiAgent class.
+Within the CardShark engine, agents are in charge of keeping track of
+their previous performance and, in the case of ML based agents, their
+own training data. They are also in charge of performing their own training
+using that data.</p>
+<p>You can also use the AgentBase class to implement your own agent classes
+if needed.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="cardshark.agent.AgentBase">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cardshark.agent.</span></span><span class="sig-name descname"><span class="pre">AgentBase</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.agent.AgentBase" title="Link to this definition"></a></dt>
+<dd><p>Base class for “agents” i.e. a thing that takes observarions and returns an action.</p>
+<p>This could be either a human player or an ML based agent</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.agent.AgentBase.get_action">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_action</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.agent.AgentBase.get_action" title="Link to this definition"></a></dt>
+<dd><p>Should take in an obervation and return an action</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.agent.AgentBase.get_win_rate">
+<span class="sig-name descname"><span class="pre">get_win_rate</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#cardshark.agent.AgentBase.get_win_rate" title="Link to this definition"></a></dt>
+<dd><p>Get the fraction of games this agent has won over the total number played</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.agent.AgentBase.register_inconclusive">
+<span class="sig-name descname"><span class="pre">register_inconclusive</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.agent.AgentBase.register_inconclusive" title="Link to this definition"></a></dt>
+<dd><p>Register that the agent took part in a game that ended inconclusively</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.agent.AgentBase.register_loss">
+<span class="sig-name descname"><span class="pre">register_loss</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.agent.AgentBase.register_loss" title="Link to this definition"></a></dt>
+<dd><p>Register that the agent lost a game</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.agent.AgentBase.register_win">
+<span class="sig-name descname"><span class="pre">register_win</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.agent.AgentBase.register_win" title="Link to this definition"></a></dt>
+<dd><p>Register that the agent won a game</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cardshark.agent.HumanAgent">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cardshark.agent.</span></span><span class="sig-name descname"><span class="pre">HumanAgent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.agent.HumanAgent" title="Link to this definition"></a></dt>
+<dd><p>Base class to be used to represent a human player</p>
+<p>User will need to implement the functionality to give game specific info to the player
+and get a game specific action from them</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.agent.HumanAgent.get_action">
+<span class="sig-name descname"><span class="pre">get_action</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.agent.HumanAgent.get_action" title="Link to this definition"></a></dt>
+<dd><p>Get the action being performed by a player.</p>
+<p>Take the user defined numpy array action from the _get_action() fn
+and convert it to a format that the Game gym environment will like</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.agent.HumanAgent.register_game">
+<span class="sig-name descname"><span class="pre">register_game</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">game</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cardshark.engine.Game" title="cardshark.engine.Game"><span class="pre">Game</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">player_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.agent.HumanAgent.register_game" title="Link to this definition"></a></dt>
+<dd><p>Set the Game being played by this player and index of this player within that game.</p>
+<p>TODO: Make this more automated… it’s a bit sloppy</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cardshark.agent.MultiAgent">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cardshark.agent.</span></span><span class="sig-name descname"><span class="pre">MultiAgent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">time_step_spec</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">TimeStep</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">action_spec</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">TypeSpec</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">TensorSpec</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">RaggedTensorSpec</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">SparseTensorSpec</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">tf_agents.distributions.utils.DistributionSpecV2</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">NestedTensorSpec</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Mapping</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">NestedTensorSpec</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">observation_spec</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">train_batch_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_buffer_length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">apply_mask</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fc_layer_params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(100,)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">checkpoint</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">checkpoint_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">DqnAgent_args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.agent.MultiAgent" title="Link to this definition"></a></dt>
+<dd><p>Machine learning agent that is to be used in multi-agent environments</p>
+<p>Keeps track of it’s own training data and outcomes of played games.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.agent.MultiAgent.add_frame">
+<span class="sig-name descname"><span class="pre">add_frame</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.agent.MultiAgent.add_frame" title="Link to this definition"></a></dt>
+<dd><p>Add the currently stored trajectory to the agents training experience buffer</p>
+<p>The trajectory describes the transition from the last registered environment step
+to the current one and the action the agent took to get here.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.agent.MultiAgent.get_action">
+<span class="sig-name descname"><span class="pre">get_action</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collect</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.agent.MultiAgent.get_action" title="Link to this definition"></a></dt>
+<dd><p>Should take in an obervation and return an action</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.agent.MultiAgent.load_checkpoint">
+<span class="sig-name descname"><span class="pre">load_checkpoint</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.agent.MultiAgent.load_checkpoint" title="Link to this definition"></a></dt>
+<dd><p>Load agents internal state from checkpoint</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.agent.MultiAgent.plot_rewards">
+<span class="sig-name descname"><span class="pre">plot_rewards</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.agent.MultiAgent.plot_rewards" title="Link to this definition"></a></dt>
+<dd><p>Make a plot of the rewards gained by this agent so far</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.agent.MultiAgent.plot_training_losses">
+<span class="sig-name descname"><span class="pre">plot_training_losses</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.agent.MultiAgent.plot_training_losses" title="Link to this definition"></a></dt>
+<dd><p>Make a plot of the training losses achieved by this agent so far</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.agent.MultiAgent.save_checkpoint">
+<span class="sig-name descname"><span class="pre">save_checkpoint</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.agent.MultiAgent.save_checkpoint" title="Link to this definition"></a></dt>
+<dd><p>Save a checkpoint of the agents internal training state</p>
+<p>This includes the model parameters, training state etc.</p>
+<p>TODO: make a subclass of the tfagent we want to use which has all internal
+variables defined as TF variables so the whole thing can be saved to a
+checkpoint maybe?</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.agent.MultiAgent.train_agent">
+<span class="sig-name descname"><span class="pre">train_agent</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.agent.MultiAgent.train_agent" title="Link to this definition"></a></dt>
+<dd><p>Run an iteration of the training algorithm using experience gained by the agent so far</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-cardshark.cards">
+<span id="cards"></span><h2>Cards<a class="headerlink" href="#module-cardshark.cards" title="Link to this heading"></a></h2>
+<p>This module provides some useful functionality for general things related to cards</p>
+<p>VERY lightweight at the moment but will likely flesh out a bit in the future.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="cardshark.cards.Deck">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cardshark.cards.</span></span><span class="sig-name descname"><span class="pre">Deck</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cards</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Deck'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.cards.Deck" title="Link to this definition"></a></dt>
+<dd><p>Class representing a deck of cards</p>
+<p>The actual objects it holds can be whatever you want. Can be simple strings,
+dictionaries or even whole classes, it’s totally up to you!</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.cards.Deck.add_card">
+<span class="sig-name descname"><span class="pre">add_card</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">card_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.cards.Deck.add_card" title="Link to this definition"></a></dt>
+<dd><p>Add a card to the top of this deck</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.cards.Deck.draw">
+<span class="sig-name descname"><span class="pre">draw</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.cards.Deck.draw" title="Link to this definition"></a></dt>
+<dd><p>Draw a card from the top of the deck</p>
+<p>Removes the card from the deck and returns it.
+If the deck has no more cards in it, will return None.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.cards.Deck.reset">
+<span class="sig-name descname"><span class="pre">reset</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.cards.Deck.reset" title="Link to this definition"></a></dt>
+<dd><p>Reset the deck</p>
+<p>Reset the internal list of card objects to what it was when the deck was instantiated</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.cards.Deck.shuffle">
+<span class="sig-name descname"><span class="pre">shuffle</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.cards.Deck.shuffle" title="Link to this definition"></a></dt>
+<dd><p>Shuffle the order of the cards in the deck</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-cardshark.named_object">
+<span id="base"></span><h2>Base<a class="headerlink" href="#module-cardshark.named_object" title="Link to this heading"></a></h2>
+<p>Module to hold the lowest level objects used in the CardShark engine</p>
+<p>Currently only NamedObject which represents unique (named) objects which we
+may want to identify by name, for reasons of debugging, or displaying info to
+users etc.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="cardshark.named_object.NamedObject">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cardshark.named_object.</span></span><span class="sig-name descname"><span class="pre">NamedObject</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">logger</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Logger</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.named_object.NamedObject" title="Link to this definition"></a></dt>
+<dd><p>Base class for unique named objects in the project</p>
+<p>Can also hold a <code class="xref py py-class docutils literal notranslate"><span class="pre">Logger</span></code> that allows for individual objects to log events</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>logger (Logger): The logger that should be used by this object.
+name (str): The name of this object instance. Default will be
+“&lt;name of derived class&gt;_&lt;N instances of derived class&gt;”.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.named_object.NamedObject.debug">
+<span class="sig-name descname"><span class="pre">debug</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">messages</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.named_object.NamedObject.debug" title="Link to this definition"></a></dt>
+<dd><p>log a debug message to the logger associated with this object (if it exists)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.named_object.NamedObject.error">
+<span class="sig-name descname"><span class="pre">error</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">messages</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.named_object.NamedObject.error" title="Link to this definition"></a></dt>
+<dd><p>log an error message to the logger associated with this object (if it exists)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.named_object.NamedObject.info">
+<span class="sig-name descname"><span class="pre">info</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">messages</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.named_object.NamedObject.info" title="Link to this definition"></a></dt>
+<dd><p>log an info message to the logger associated with this object (if it exists)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.named_object.NamedObject.trace">
+<span class="sig-name descname"><span class="pre">trace</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">messages</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.named_object.NamedObject.trace" title="Link to this definition"></a></dt>
+<dd><p>log a trace message to the logger associated with this object (if it exists)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardshark.named_object.NamedObject.warn">
+<span class="sig-name descname"><span class="pre">warn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">messages</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cardshark.named_object.NamedObject.warn" title="Link to this definition"></a></dt>
+<dd><p>log a warning message to the logger associated with this object (if it exists)</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="CardShark documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Ewan Miller.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
