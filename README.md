@@ -39,7 +39,6 @@ Documentation can be built using sphinx:
 ```
 pip install --upgrade pip
 pip install sphinx
-pip install sphinx-autodoc
 
 sphinx-build -M html doc/source <doc_build_directory>
 ```
