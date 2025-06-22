@@ -90,11 +90,7 @@ class CoupHumanAgent(HumanAgent):
             else:
                 colour = RESET
 
-            print(
-                "  {colour}{i}. {action}{colour_reset}".format(
-                    colour=colour, i=i, action=name, colour_reset=RESET
-                )
-            )
+            print(f"  {colour}{i}. {name}{RESET}")
 
     def _get_block_challenge_mask(self):
         n_targets = int(self._game._action_space.action_max[1])
@@ -134,7 +130,7 @@ class CoupHumanAgent(HumanAgent):
 
         return mask
 
-    def _get_user_input(self, max: int, mask=None) -> int:
+    def _get_user_input(self, max_val: int, mask=None) -> int:
         # get user input and check it's valid
         while True:
             inp = input("choice: ")
@@ -147,7 +143,7 @@ class CoupHumanAgent(HumanAgent):
 
             inp_int = int(inp)
 
-            if inp_int >= max:
+            if inp_int >= max_val:
                 valid = False
                 message = "Value out of range"
 
@@ -160,7 +156,7 @@ class CoupHumanAgent(HumanAgent):
                 return inp_int
 
             ## if not valid, tell the user why and loop will repeat
-            print("{}INVALID CHOICE: {}{}".format(RED, message, RESET))
+            print(f"{RED}INVALID CHOICE: {message}{RESET}")
 
     def _get_action(self):
         ## 1st variable is which action to take in the action phase of the game
