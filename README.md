@@ -30,7 +30,7 @@ pip install CardShark/
 ## Requirements
 
 ### Python
-CardShark currently only supports python versions `3.8`, `3.9` and `3.10`... sorry
+CardShark currently only supports python versions `3.8`, `3.9` `3.10` and `3.11`... sorry
 
 ## Documentation
 
