@@ -19,7 +19,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="CardShark API" href="api.html" /> 
+    <link rel="next" title="Installation" href="intro.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -41,9 +41,16 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">🚀 Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="intro.html#features">Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="intro.html#examples">Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">📖 References:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="api.html">CardShark API</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/ewanwm/CardShark">GitHub 🔗</a></li>
 </ul>
 
         </div>
@@ -74,15 +81,123 @@
 <h1>CardShark documentation<a class="headerlink" href="#cardshark-documentation" title="Link to this heading"></a></h1>
 <p>Welcome to the CardShark docs!</p>
 <div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<p class="caption" role="heading"><span class="caption-text">🚀 Getting Started</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="api.html">CardShark API</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="api.html#module-cardshark.engine">Engine</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#module-cardshark.agent">Agent</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#module-cardshark.cards">Cards</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#module-cardshark.named_object">Base</a></li>
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="intro.html#features">Features</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="intro.html#engine">Engine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="intro.html#user-interface">User Interface</a></li>
+<li class="toctree-l2"><a class="reference internal" href="intro.html#reinforcement-learning">Reinforcement Learning</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="intro.html#examples">Examples</a></li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">📖 References:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api.html">CardShark API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-cardshark.engine">Engine</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#cardshark.engine.ActionSpace"><code class="docutils literal notranslate"><span class="pre">ActionSpace</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.engine.ActionSpace.get_tf_spec"><code class="docutils literal notranslate"><span class="pre">ActionSpace.get_tf_spec()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.engine.ActionSpace.get_unravelled"><code class="docutils literal notranslate"><span class="pre">ActionSpace.get_unravelled()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.engine.ActionSpace.unravel"><code class="docutils literal notranslate"><span class="pre">ActionSpace.unravel()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#cardshark.engine.Game"><code class="docutils literal notranslate"><span class="pre">Game</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.engine.Game.action_spec"><code class="docutils literal notranslate"><span class="pre">Game.action_spec()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.engine.Game.check_status"><code class="docutils literal notranslate"><span class="pre">Game.check_status()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.engine.Game.flatten_action"><code class="docutils literal notranslate"><span class="pre">Game.flatten_action()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.engine.Game.get_active_player"><code class="docutils literal notranslate"><span class="pre">Game.get_active_player()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.engine.Game.get_info"><code class="docutils literal notranslate"><span class="pre">Game.get_info()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.engine.Game.get_mask"><code class="docutils literal notranslate"><span class="pre">Game.get_mask()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.engine.Game.observation_spec"><code class="docutils literal notranslate"><span class="pre">Game.observation_spec()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.engine.Game.set_action_spec"><code class="docutils literal notranslate"><span class="pre">Game.set_action_spec()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.engine.Game.set_active_player"><code class="docutils literal notranslate"><span class="pre">Game.set_active_player()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.engine.Game.set_observation_spec"><code class="docutils literal notranslate"><span class="pre">Game.set_observation_spec()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.engine.Game.set_winner"><code class="docutils literal notranslate"><span class="pre">Game.set_winner()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.engine.Game.skipped_turn"><code class="docutils literal notranslate"><span class="pre">Game.skipped_turn()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#cardshark.engine.GameState"><code class="docutils literal notranslate"><span class="pre">GameState</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.engine.GameState.handle"><code class="docutils literal notranslate"><span class="pre">GameState.handle()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.engine.GameState.name"><code class="docutils literal notranslate"><span class="pre">GameState.name()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#cardshark.engine.ObservationSpace"><code class="docutils literal notranslate"><span class="pre">ObservationSpace</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.engine.ObservationSpace.get_tf_spec"><code class="docutils literal notranslate"><span class="pre">ObservationSpace.get_tf_spec()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#cardshark.engine.Player"><code class="docutils literal notranslate"><span class="pre">Player</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.engine.Player.check_reward"><code class="docutils literal notranslate"><span class="pre">Player.check_reward()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.engine.Player.claim_reward"><code class="docutils literal notranslate"><span class="pre">Player.claim_reward()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.engine.Player.get_info_str"><code class="docutils literal notranslate"><span class="pre">Player.get_info_str()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.engine.Player.give_reward"><code class="docutils literal notranslate"><span class="pre">Player.give_reward()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.engine.Player.reset"><code class="docutils literal notranslate"><span class="pre">Player.reset()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#cardshark.engine.RewardState"><code class="docutils literal notranslate"><span class="pre">RewardState</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.engine.RewardState.handle"><code class="docutils literal notranslate"><span class="pre">RewardState.handle()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.engine.RewardState.name"><code class="docutils literal notranslate"><span class="pre">RewardState.name()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#cardshark.engine.TerminatedState"><code class="docutils literal notranslate"><span class="pre">TerminatedState</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.engine.TerminatedState.handle"><code class="docutils literal notranslate"><span class="pre">TerminatedState.handle()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.engine.TerminatedState.name"><code class="docutils literal notranslate"><span class="pre">TerminatedState.name()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-cardshark.agent">Agent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#cardshark.agent.AgentBase"><code class="docutils literal notranslate"><span class="pre">AgentBase</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.agent.AgentBase.get_action"><code class="docutils literal notranslate"><span class="pre">AgentBase.get_action()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.agent.AgentBase.get_win_rate"><code class="docutils literal notranslate"><span class="pre">AgentBase.get_win_rate()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.agent.AgentBase.register_inconclusive"><code class="docutils literal notranslate"><span class="pre">AgentBase.register_inconclusive()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.agent.AgentBase.register_loss"><code class="docutils literal notranslate"><span class="pre">AgentBase.register_loss()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.agent.AgentBase.register_win"><code class="docutils literal notranslate"><span class="pre">AgentBase.register_win()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#cardshark.agent.HumanAgent"><code class="docutils literal notranslate"><span class="pre">HumanAgent</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.agent.HumanAgent.get_action"><code class="docutils literal notranslate"><span class="pre">HumanAgent.get_action()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.agent.HumanAgent.register_game"><code class="docutils literal notranslate"><span class="pre">HumanAgent.register_game()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#cardshark.agent.MultiAgent"><code class="docutils literal notranslate"><span class="pre">MultiAgent</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.agent.MultiAgent.add_frame"><code class="docutils literal notranslate"><span class="pre">MultiAgent.add_frame()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.agent.MultiAgent.get_action"><code class="docutils literal notranslate"><span class="pre">MultiAgent.get_action()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.agent.MultiAgent.load_checkpoint"><code class="docutils literal notranslate"><span class="pre">MultiAgent.load_checkpoint()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.agent.MultiAgent.plot_rewards"><code class="docutils literal notranslate"><span class="pre">MultiAgent.plot_rewards()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.agent.MultiAgent.plot_training_losses"><code class="docutils literal notranslate"><span class="pre">MultiAgent.plot_training_losses()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.agent.MultiAgent.save_checkpoint"><code class="docutils literal notranslate"><span class="pre">MultiAgent.save_checkpoint()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.agent.MultiAgent.train_agent"><code class="docutils literal notranslate"><span class="pre">MultiAgent.train_agent()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-cardshark.cards">Cards</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#cardshark.cards.Deck"><code class="docutils literal notranslate"><span class="pre">Deck</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.cards.Deck.add_card"><code class="docutils literal notranslate"><span class="pre">Deck.add_card()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.cards.Deck.draw"><code class="docutils literal notranslate"><span class="pre">Deck.draw()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.cards.Deck.reset"><code class="docutils literal notranslate"><span class="pre">Deck.reset()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.cards.Deck.shuffle"><code class="docutils literal notranslate"><span class="pre">Deck.shuffle()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-cardshark.named_object">Base</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#cardshark.named_object.NamedObject"><code class="docutils literal notranslate"><span class="pre">NamedObject</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.named_object.NamedObject.debug"><code class="docutils literal notranslate"><span class="pre">NamedObject.debug()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.named_object.NamedObject.error"><code class="docutils literal notranslate"><span class="pre">NamedObject.error()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.named_object.NamedObject.info"><code class="docutils literal notranslate"><span class="pre">NamedObject.info()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.named_object.NamedObject.trace"><code class="docutils literal notranslate"><span class="pre">NamedObject.trace()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#cardshark.named_object.NamedObject.warn"><code class="docutils literal notranslate"><span class="pre">NamedObject.warn()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/ewanwm/CardShark">GitHub 🔗</a></li>
 </ul>
 </div>
 </section>
@@ -91,7 +206,7 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="api.html" class="btn btn-neutral float-right" title="CardShark API" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="intro.html" class="btn btn-neutral float-right" title="Installation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

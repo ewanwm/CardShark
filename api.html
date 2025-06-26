@@ -19,7 +19,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="prev" title="CardShark documentation" href="index.html" /> 
+    <link rel="prev" title="Installation" href="intro.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -41,7 +41,13 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">🚀 Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="intro.html#features">Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="intro.html#examples">Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">📖 References:</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">CardShark API</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#module-cardshark.engine">Engine</a><ul>
@@ -144,6 +150,7 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/ewanwm/CardShark">GitHub 🔗</a></li>
 </ul>
 
         </div>
@@ -173,7 +180,7 @@
   <section id="cardshark-api">
 <h1>CardShark API<a class="headerlink" href="#cardshark-api" title="Link to this heading"></a></h1>
 <section id="module-cardshark.engine">
-<span id="engine"></span><h2>Engine<a class="headerlink" href="#module-cardshark.engine" title="Link to this heading"></a></h2>
+<span id="engine"></span><span id="engine-api"></span><h2>Engine<a class="headerlink" href="#module-cardshark.engine" title="Link to this heading"></a></h2>
 <p>This module contains the objects used to describe games</p>
 <p>CardShark uses a state pattern to model games. To implement a new
 game you will need to implement a game class derived from Game which
@@ -506,7 +513,7 @@ on the provided action array.</p>
 
 </section>
 <section id="module-cardshark.agent">
-<span id="agent"></span><h2>Agent<a class="headerlink" href="#module-cardshark.agent" title="Link to this heading"></a></h2>
+<span id="agent"></span><span id="agent-api"></span><h2>Agent<a class="headerlink" href="#module-cardshark.agent" title="Link to this heading"></a></h2>
 <p>Agents are “things that play games”.</p>
 <p>These can either be human players, represented by the HumanAgent class,
 or machine learning based agents represented by the MultiAgent class.
@@ -633,7 +640,7 @@ checkpoint maybe?</p>
 
 </section>
 <section id="module-cardshark.cards">
-<span id="cards"></span><h2>Cards<a class="headerlink" href="#module-cardshark.cards" title="Link to this heading"></a></h2>
+<span id="cards"></span><span id="cards-api"></span><h2>Cards<a class="headerlink" href="#module-cardshark.cards" title="Link to this heading"></a></h2>
 <p>This module provides some useful functionality for general things related to cards</p>
 <p>VERY lightweight at the moment but will likely flesh out a bit in the future.</p>
 <dl class="py class">
@@ -673,7 +680,7 @@ If the deck has no more cards in it, will return None.</p>
 
 </section>
 <section id="module-cardshark.named_object">
-<span id="base"></span><h2>Base<a class="headerlink" href="#module-cardshark.named_object" title="Link to this heading"></a></h2>
+<span id="base"></span><span id="base-api"></span><h2>Base<a class="headerlink" href="#module-cardshark.named_object" title="Link to this heading"></a></h2>
 <p>Module to hold the lowest level objects used in the CardShark engine</p>
 <p>Currently only NamedObject which represents unique (named) objects which we
 may want to identify by name, for reasons of debugging, or displaying info to
@@ -728,7 +735,7 @@ name (str): The name of this object instance. Default will be
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="index.html" class="btn btn-neutral float-left" title="CardShark documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="intro.html" class="btn btn-neutral float-left" title="Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 
   <hr/>
