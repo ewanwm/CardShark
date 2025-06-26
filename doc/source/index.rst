@@ -8,9 +8,14 @@ CardShark documentation
 
 Welcome to the CardShark docs!
 
+.. toctree::
+   :caption: 🚀 Getting Started
+
+   intro.rst
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :caption: 📖 References:
 
    api.rst
+
+   GitHub 🔗 <https://github.com/ewanwm/CardShark>
