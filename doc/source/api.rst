@@ -25,6 +25,14 @@ Cards
 .. automodule:: cardshark.cards
    :members:
 
+.. _UI API:
+
+==============
+User Interface
+==============
+.. automodule:: cardshark.ui
+   :members:
+
 .. _Base API:
 
 ====
