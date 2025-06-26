@@ -1,6 +1,6 @@
 [project]
     name = "cardshark"
-    dynamic = ["version"]
+    dynamic = ["version", "dependencies"]
 
     authors = [
         {name = "Ewan Miller", email = "ewan.m0312@gmail.com"}
@@ -13,13 +13,6 @@
     description = "Engine for creating card games and teaching AI agents to play them"
 
     readme = "README.md"
-
-    dependencies = [
-        "tensorflow<=2.15.0",
-        "tf-agents",
-        "numpy",
-        "matplotlib",
-    ]
     
     keywords = [
         "card", 
@@ -36,3 +29,5 @@
     requires = ["setuptools"]
     build-backend = "setuptools.build_meta"
 
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}

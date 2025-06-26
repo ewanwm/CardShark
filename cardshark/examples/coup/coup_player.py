@@ -168,7 +168,8 @@ class CoupPlayer(engine.Player):
 
         card_string += "] "
 
-        ret_str = ":: {col}{name}{col} has {coin_col}{n_coins} coins{col} and cards {cards}{reset}::".format(
+        ret_str = ":: {col}{name}{col} has {coin_col}{n_coins} coins{col} and cards " \
+        "{cards}{reset}::".format(
             name=f"{self.name:>15}",
             n_coins=self.coins,
             cards=card_string,

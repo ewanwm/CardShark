@@ -54,6 +54,7 @@ class ActionSpace(NamedObject):
         self.action_names: typing.List[str] = []
         self.action_min: np.ndarray = np.zeros((len(spec.items())))
         self.action_max: np.ndarray = np.zeros((len(spec.items())))
+        self._unravelled_action_space = None
 
         for i, (name, limits) in enumerate(spec.items()):
             assert len(limits) == 2, (
@@ -109,6 +110,22 @@ class ActionSpace(NamedObject):
             dtype=np.int32,
         )
 
+    def get_tf_spec(self) -> BoundedArraySpec:
+        """Get the tensorflow spec for this action space
+
+        :return: The tensorflow BoundedArraySpec associated with this action space
+        :rtype: BoundedArraySpec
+        """
+        return self._tf_spec
+
+    def get_unravelled(self) -> np.array:
+        """Get the unravelled action space
+
+        :return: The unravelled (flattened) action space
+        :rtype: np.array
+        """
+
+        return self._unravelled_action_space
 
 class ObservationSpace(NamedObject):
     """Describes the observation space of a Game environment
@@ -126,8 +143,8 @@ class ObservationSpace(NamedObject):
 
     def __init__(
         self,
-        min: np.ndarray,
-        max: np.ndarray,
+        min_vals: np.ndarray,
+        max_vals: np.ndarray,
         action_space: ActionSpace,
         n_players: int,
         names: typing.List[typing.List[str]] = None,
@@ -135,25 +152,25 @@ class ObservationSpace(NamedObject):
     ):
         super().__init__(**kwargs)
 
-        assert min.shape == max.shape, "Min and Max arrays must have matching shapes"
+        assert min_vals.shape == max_vals.shape, "Min and Max arrays must have matching shapes"
 
         if names is not None:
-            assert len(names) == len(min.shape), (
+            assert len(names) == len(min_vals.shape), (
                 "Name list shape does not match array shape"
             )
 
         self.observation_names: typing.List[typing.List[str]] = names
-        self.observation_min: np.ndarray = min
-        self.observation_max: np.ndarray = max
+        self.observation_min: np.ndarray = min_vals
+        self.observation_max: np.ndarray = max_vals
 
-        self.debug("obs_spec_min: ", min)
-        self.debug("obs_spec_max: ", max)
+        self.debug("obs_spec_min: ", min_vals)
+        self.debug("obs_spec_max: ", max_vals)
 
         self._tf_spec = {
             "observations": BoundedArraySpec(
-                minimum=min.flatten(),
-                maximum=max.flatten(),
-                shape=max.flatten().shape,
+                minimum=min_vals.flatten(),
+                maximum=max_vals.flatten(),
+                shape=max_vals.flatten().shape,
                 name="observation",
                 dtype=np.float32,
             ),
@@ -161,7 +178,7 @@ class ObservationSpace(NamedObject):
                 minimum=0,
                 maximum=1,
                 shape=(
-                    action_space._tf_spec.maximum - action_space._tf_spec.minimum + 1,
+                    action_space.get_tf_spec().maximum - action_space.get_tf_spec().minimum + 1,
                 ),
                 dtype=np.int32,
                 name="mask",
@@ -174,6 +191,14 @@ class ObservationSpace(NamedObject):
                 name="activePlayer",
             ),
         }
+
+    def get_tf_spec(self) -> BoundedArraySpec:
+        """Get the tensorflow spec for this observation space
+
+        :return: the BoundedArraySpec for this observation space
+        :rtype: BoundedArraySpec
+        """
+        return self._tf_spec
 
 
 class Game(py_environment.PyEnvironment, NamedObject, ABC):
@@ -264,10 +289,10 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
         """Get the mask values for all possible actions using the user defined _get_mask()"""
 
         mask = np.zeros(
-            (self._action_space._unravelled_action_space.shape[0]), dtype=np.int32
+            (self._action_space.get_unravelled().shape[0]), dtype=np.int32
         )
 
-        for action_id, action in enumerate(self._action_space._unravelled_action_space):
+        for action_id, action in enumerate(self._action_space.get_unravelled()):
             if self._get_mask(action, player_id):
                 mask[action_id] = 1
             else:
@@ -296,8 +321,8 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
 
     def set_observation_spec(
         self,
-        min: np.ndarray,
-        max: np.ndarray,
+        min_vals: np.ndarray,
+        max_vals: np.ndarray,
         names: typing.List[typing.List[str]] = None,
     ) -> None:
         """Use this to describe the shape of the observations for agents playing your game
@@ -313,8 +338,8 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
         )
 
         self._observation_space = ObservationSpace(
-            min,
-            max,
+            min_vals,
+            max_vals,
             self._action_space,
             self.n_players,
             names,
@@ -322,13 +347,11 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
             logger=self.logger,
         )
 
-    ## for returning general info about the environment, not things necessarily
-    ## needed by agents as observations.
-    ## TODO: This should be automated. should construct the _info dict from info
-    ## set by the user, should add helper fns like set_winner(), skip_turn()...
-    ## TODO: Add a give_reward() to Game that keeps track of the reward issued
-    ## this turn so it can be added to the _info and user doesn't have to
-    ## set this manually
+    def set_winner(self, winner:int) -> None:
+        """Set the winner of the current game"""
+
+        self._winner = winner
+
     def get_info(self) -> typing.Dict:
         """Get information about the state of the game
 
@@ -347,18 +370,18 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
             - "activePlayer": ArraySpec describing the part of the observation that
             tells which player is active
         """
-        return self._observation_space._tf_spec
+        return self._observation_space.get_tf_spec()
 
     def action_spec(self) -> BoundedArraySpec:
         """Get the action specification for the environment associated with this Game object"""
-        return self._action_space._tf_spec
+        return self._action_space.get_tf_spec()
 
     def flatten_action(self, action_ndim):
         """Take an N dimensional action array and find which 1d action index it corresponds to"""
 
         # could definitely be smarter about this but I'm lazy... :/
-        for i in range(self._action_space._unravelled_action_space.shape[0]):
-            if np.all(self._action_space._unravelled_action_space[i] == action_ndim):
+        for i in range(self._action_space.get_unravelled().shape[0]):
+            if np.all(self._action_space.get_unravelled()[i] == action_ndim):
                 return np.array([i])
 
         raise ValueError(
@@ -414,9 +437,9 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
     def _step(self, action: np.ndarray) -> None:
         """Step the game forward one iteration"""
         self.info("")
-        self.info("##### Stepping :: Step {} #####".format(self._step_count))
-        self.debug("gameState:", self._game_state)
-        self.debug("specified actions:", action)
+        self.info(f"##### Stepping :: Step {self._step_count} #####")
+        self.debug(f"gameState: {self._game_state}")
+        self.debug(f"specified actions: {action}")
 
         ## set default info values for this step
         self._info["reward"] = 0
@@ -424,7 +447,7 @@ class Game(py_environment.PyEnvironment, NamedObject, ABC):
 
         ## might need to re-ravel the action
         if self._unravel_action_space:
-            action = self._action_space._unravelled_action_space[action]
+            action = self._action_space.get_unravelled()[action]
             self.debug("ravelled actions:", action)
 
         self.debug("Active player", self.player_list[self._active_player])

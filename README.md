@@ -1,7 +1,7 @@
 # CardShark
 
 [![pip](https://github.com/ewanwm/CardShark/actions/workflows/pip_install.yml/badge.svg)](https://github.com/ewanwm/CardShark/actions/workflows/pip_install.yml)
-[![pylint](https://github.com/ewanwm/CardShark/actions/workflows/pylint.yml/badge.svg)](https://github.com/ewanwm/CardShark/actions/workflows/pylint.yml)
+[![pylint](https://img.shields.io/badge/PyLint-9.75-yellow?logo=python&logoColor=white)](https://github.com/ewanwm/CardShark/actions/workflows/pylint.yml)
 
 A Python based engine for creating card and board games, with bult-in support for [Tensorflows Agents library](https://www.tensorflow.org/agents) allowing you to easily use reinforcement learning to train agents to play your games.
 

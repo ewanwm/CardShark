@@ -115,7 +115,7 @@ class CoupGame(engine.Game):
         ]
 
         self.set_observation_spec(
-            min=obs_spec_min, max=obs_spec_max, names=[player_names, obs_names]
+            min_vals=obs_spec_min, max_vals=obs_spec_max, names=[player_names, obs_names]
         )
 
         ## initialise the players
@@ -129,6 +129,15 @@ class CoupGame(engine.Game):
         ## initialise the deck
         self.trace("  Creating deck")
         self.deck = Deck(coup_cards.cards)
+
+
+
+        self.attempted_action = None
+        self.current_player_action = None
+        self.action_target = None
+        self.current_player_block = None
+        self.current_player_challenge = None
+
 
     def action_array_to_string(self, action: np.array) -> str:
         """Convert action array to a human readable string
@@ -244,7 +253,7 @@ class CoupGame(engine.Game):
             + player1.name
             + " performed action: steal, Target: "
             + player2.name
-            + " (stole {})".format(coins_to_steal)
+            + f" (stole {coins_to_steal})"
         )
 
         player2.take_coins(coins_to_steal)
@@ -329,7 +338,7 @@ class CoupGame(engine.Game):
                 if player.is_alive:
                     self.info("")
                     self.info("  ** Player " + player.name + " Wins! **")
-                    self._winner = player_id
+                    self.set_winner(player_id)
                     player.give_reward(50)
 
                     return True
@@ -411,7 +420,8 @@ class CoupGame(engine.Game):
         ]:
             if block_or_challenge != 0:
                 self.trace(
-                    "_get_mask(): not in block or challenge state so need to choose no block and no challenge"
+                    "_get_mask(): not in block or challenge state so " \
+                    "need to choose no block and no challenge"
                 )
                 return False
 
@@ -594,88 +604,87 @@ class ActionState(engine.GameState):
 
             return ActionState
 
-        else:
-            game.attempted_action = ACTION_NAMES[action[0]]
-            game.info(
-                "Player",
-                game.player_list[game.current_player_action].name,
-                "is attempting action",
-                game.attempted_action,
-            )
+        game.attempted_action = ACTION_NAMES[action[0]]
+        game.info(
+            "Player",
+            game.player_list[game.current_player_action].name,
+            "is attempting action",
+            game.attempted_action,
+        )
 
-            blockable = False
-            targetted = False
-            challengable = False
-            ## first check if this action has a target
-            if ACTIONS[game.attempted_action]["targeted"]:
-                game.action_target = (
-                    game.current_player_action + 1 + action[1]
-                ) % game.n_players
-                game.info(
-                    "Targetting player",
-                    game.player_list[game.action_target].name,
-                    "at index",
-                    game.action_target,
-                )
-                targetted = True
-            else:
-                game.debug("Not a targetted action")
-
-            ## check if this action can be blocked by any card
-            if ACTIONS[game.attempted_action]["blockedBy"] != [""]:
-                game.debug(
-                    "Could be blocked by", ACTIONS[game.attempted_action]["blockedBy"]
-                )
-                blockable = True
-            else:
-                game.debug("Not blockable")
-
-            ## check if this action could be challenged
-            if ACTIONS[game.attempted_action]["needs"] != "":
-                game.debug(
-                    "can be challenged as action requires",
-                    ACTIONS[game.attempted_action]["needs"],
-                )
-                challengable = True
-            else:
-                game.debug("cant be challenged")
-
-            if targetted:
-                if blockable:
-                    game.current_player_block = game.action_target
-                    game.set_active_player(game.current_player_block)
-
-                if challengable:
-                    game.current_player_challenge = game.action_target
-                    game.set_active_player(game.current_player_challenge)
-
-                if blockable or challengable:
-                    return BlockOrChallengeState
-
-            else:
-                if blockable:
-                    game.current_player_block = (
-                        game.current_player_action + 1
-                    ) % game.n_players
-                    game.set_active_player(game.current_player_block)
-
-                    return BlockingGeneralState
-
-                if challengable:
-                    game.current_player_challenge = (
-                        game.current_player_action + 1
-                    ) % game.n_players
-                    game.set_active_player(game.current_player_challenge)
-
-                    return ChallengeGeneralState
-
-            game.perform_attempted_action()
-            game.current_player_action = (
-                game.current_player_action + 1
+        blockable = False
+        targetted = False
+        challengable = False
+        ## first check if this action has a target
+        if ACTIONS[game.attempted_action]["targeted"]:
+            game.action_target = (
+                game.current_player_action + 1 + action[1]
             ) % game.n_players
-            game.set_active_player(game.current_player_action)
+            game.info(
+                "Targetting player",
+                game.player_list[game.action_target].name,
+                "at index",
+                game.action_target,
+            )
+            targetted = True
+        else:
+            game.debug("Not a targetted action")
 
-            return ActionState
+        ## check if this action can be blocked by any card
+        if ACTIONS[game.attempted_action]["blockedBy"] != [""]:
+            game.debug(
+                "Could be blocked by", ACTIONS[game.attempted_action]["blockedBy"]
+            )
+            blockable = True
+        else:
+            game.debug("Not blockable")
+
+        ## check if this action could be challenged
+        if ACTIONS[game.attempted_action]["needs"] != "":
+            game.debug(
+                "can be challenged as action requires",
+                ACTIONS[game.attempted_action]["needs"],
+            )
+            challengable = True
+        else:
+            game.debug("cant be challenged")
+
+        if targetted:
+            if blockable:
+                game.current_player_block = game.action_target
+                game.set_active_player(game.current_player_block)
+
+            if challengable:
+                game.current_player_challenge = game.action_target
+                game.set_active_player(game.current_player_challenge)
+
+            if blockable or challengable:
+                return BlockOrChallengeState
+
+        else:
+            if blockable:
+                game.current_player_block = (
+                    game.current_player_action + 1
+                ) % game.n_players
+                game.set_active_player(game.current_player_block)
+
+                return BlockingGeneralState
+
+            if challengable:
+                game.current_player_challenge = (
+                    game.current_player_action + 1
+                ) % game.n_players
+                game.set_active_player(game.current_player_challenge)
+
+                return ChallengeGeneralState
+
+        game.perform_attempted_action()
+        game.current_player_action = (
+            game.current_player_action + 1
+        ) % game.n_players
+        game.set_active_player(game.current_player_action)
+
+        return ActionState
 
 
 class BlockingGeneralState(engine.GameState):
